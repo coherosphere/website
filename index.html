@@ -18,106 +18,154 @@
     <meta name="twitter:title" content="coherosphere – the sphere of coherence">
     <meta name="twitter:description" content="A decentralized collective and resonance space for humanity, technology and values.">
     <meta name="twitter:image" content="https://coherosphere.com/preview.png">
-    <style>
-      .wrap {
-        min-height: 100dvh;
-        display: flex;
-        flex-direction: column
-      }
 
-      .stage {
-        flex: 0 0 auto;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        gap: 24px
-      }
+<style>.wrap {
+	min-height: 100dvh;
+	display: flex;
+	flex-direction: column
+}
 
-      .btn,
-      a.btn,
-      footer.controls {
-        align-items: center;
-        justify-content: center
-      }
+.stage {
+	flex: 0 0 auto;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	gap: 24px
+}
 
-      footer.controls {
-        margin-top: auto;
-        display: flex;
-        gap: 16px;
-        padding: 16px 24px;
-        border-top: 1px solid #eee;
-        background: #fafafa
-      }
+.btn,
+a.btn,
+footer.controls {
+	align-items: center;
+	justify-content: center
+}
 
-      svg {
-        width: min(92vw, 2100px);
-        height: auto;
-        max-height: calc(100dvh - 160px);
-        display: block
-      }
+footer.controls {
+	margin-top: auto;
+	display: flex;
+	gap: 16px;
+	padding: 16px 24px;
+	border-top: 1px solid #eee;
+	background: #fafafa
+}
 
-      .btn,
-      a.btn {
-        display: inline-flex;
-        padding: 0 18px;
-        border: 0;
-        background-color: #1E3A5F;
-        color: #fff;
-        border-radius: 12px;
-        cursor: pointer;
-        font: 400 14px"Nunito Sans", Arial, sans-serif;
-        text-decoration: none;
-        transition: background .3s ease;
-        height: 40px;
-        line-height: 44px
-        display: inline-flex;
-        justify-content: center;
-        width: 125px; 
-        padding: 0;
-      }
+svg {
+	width: min(92vw, 2100px);
+	height: auto;
+	max-height: calc(100dvh - 160px);
+	display: block
+}
 
-      .btn:hover,
-      a.btn:hover {
-        background: #ff6f3c;
-        color: #fff
-         transition: background-color 0.3s ease;
-      }
+.btn,
+a.btn {
+	display: inline-flex;
+	padding: 0 18px;
+	border: 0;
+	background-color: #1E3A5F;
+	color: #fff;
+	border-radius: 12px;
+	cursor: pointer;
+	font: 400 14px"Nunito Sans", Arial, sans-serif;
+	text-decoration: none;
+	transition: background .3s ease;
+	height: 40px;
+	line-height: 44px display: inline-flex;
+	justify-content: center;
+	width: 125px;
+	padding: 0;
+}
 
-      .btn[disabled] {
-        opacity: .5;
-        cursor: default
-      }
+.btn:hover,
+a.btn:hover {
+	background: #ff6f3c;
+	color: #fff transition: background-color 0.3s ease;
+}
 
-      .claim {
-        text-align: center;
-        font: 500 20px"Nunito Sans", Arial, sans-serif
-      }
+.btn[disabled] {
+	opacity: .5;
+	cursor: default
+}
 
-      :root {
-        --bg1: #fafbfc;
-        --bg2: #f2f4f7;
-        --color-humanity: #d1d5db;
-        --color-technology: #9ca3af;
-        --color-values: #6b7280;
-        --neutral: #d9e2ec
-      }
+.claim {
+	text-align: center;
+	font: 500 20px"Nunito Sans", Arial, sans-serif
+}
 
-      #bg {
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        filter: brightness(118%) saturate(80%) contrast(90%)
-      }
+:root {
+	--bg1: #fafbfc;
+	--bg2: #f2f4f7;
+	--color-humanity: #d1d5db;
+	--color-technology: #9ca3af;
+	--color-values: #6b7280;
+	--neutral: #d9e2ec
+}
 
-      @media (prefers-reduced-motion:reduce) {
-        #bg {
-          display: none
-        }
-      }
-    </style>
+#bg {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	width: 100vw;
+	height: 100vh;
+	display: block;
+	filter: brightness(118%) saturate(80%) contrast(90%)
+}
+
+@media (prefers-reduced-motion:reduce) {
+	#bg {
+		display: none
+	}
+}
+
+.changelog {
+	max-width: min(92vw, 2100px);
+	/* gleiche Breite wie Logo */
+	margin: 0 auto;
+	padding: 24px;
+}
+
+.changelog summary {
+	display: block;
+	text-align: center;
+	font: 600 16px "Nunito Sans", Arial, sans-serif;
+	cursor: pointer;
+	margin: 8px 0 12px;
+}
+
+.changelog summary::-webkit-details-marker {
+	display: none;
+}
+
+.changelog .changes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 6px;
+}
+
+.changelog .changes li {
+	padding: 6px 0;
+	border: 0;
+	background: transparent;
+	border-radius: 0;
+	font: 400 14px "Nunito Sans", Arial, sans-serif;
+}
+
+.changelog summary::-webkit-details-marker {
+	display: none;
+}
+
+.changelog summary::marker {
+	content: "";
+}
+
+
+.changelog time {
+	font-weight: 600;
+}
+
+</style>
+
   </head>
   <body>
     <!-- coherosphere WebGL background canvas -->
@@ -187,6 +235,14 @@
       <p class="claim">
         <em>«ko-HER-o-sphere»</em> – the Sphere of Coherence – where humanity, technology, values resonate.
       </p>
+      
+<section class="changelog" aria-labelledby="changelog-title">
+  <details>
+    <summary id="changelog-title">Changelog</summary>
+    <ul id="changes" class="changes"></ul>
+  </details>
+</section>
+      
       <footer class="controls">
         <audio id="audio" src="manifesto.mp3" preload="auto" playsinline></audio>
         <button id="play" class="btn">▶ manifesto</button>
@@ -426,6 +482,31 @@
         requestAnimationFrame(animate);
       }
       animate();
-    </script>
+     
+
+(async () => {
+  try {
+    const res = await fetch('changelog.txt', { cache: 'no-cache' });
+    const txt = await res.text();
+    const list = document.getElementById('changes');
+    list.innerHTML = txt
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(line => {
+        const [datePart, ...rest] = line.split('|');
+        const date = (datePart || '').trim();
+        const msg = (rest.join('|') || '').trim();
+        return `<li><time datetime="${date.replace(/\./g,'-')}">${date}</time> – ${msg}</li>`;
+      })
+      .join('');
+  } catch(e) {
+    console.error('Changelog can not be loaded', e);
+    document.getElementById('changes').innerHTML =
+      '<li>Changelog not available</li>';
+  }
+})();
+</script>
+
   </body>
 </html>
