@@ -1,3 +1,3 @@
-2025-09-13 | initial manifesto version 1
-2025-09-13 | initial website
-2025-09-10 | domain registration
+2025-09-13|Block 914508|Onchain Manifesto|https://uniscan.cc/inscription/106004490
+2025-09-13|Launch website|GitHub repository|https://github.com/coherosphere
+2025-09-10|Domain registration

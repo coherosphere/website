@@ -1,512 +1,517 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <title>coherosphere – the sphere of coherence</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <!-- SEO -->
-    <meta name="description" content="coherosphere is the sphere of coherence – a global resonance space where humanity, technology and values come together in harmony.">
-    <!-- Open Graph (Facebook, LinkedIn, etc.) -->
-    <meta property="og:title" content="coherosphere – the sphere of coherence">
-    <meta property="og:description" content="A decentralized collective and resonance space for humanity, technology and values.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://coherosphere.com">
-    <meta property="og:image" content="https://coherosphere.com/preview.png">
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="coherosphere – the sphere of coherence">
-    <meta name="twitter:description" content="A decentralized collective and resonance space for humanity, technology and values.">
-    <meta name="twitter:image" content="https://coherosphere.com/preview.png">
-
-<style>.wrap {
-	min-height: 100dvh;
-	display: flex;
-	flex-direction: column
+   <head>
+      <meta charset="UTF-8">
+      <title>coherosphere – the sphere of coherence</title>
+      <link rel="icon" type="image/x-icon" href="favicon.ico">
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <!-- SEO -->
+      <meta name="description" content="coherosphere is the sphere of coherence – a global resonance space where humanity, technology and values come together in harmony.">
+      <!-- Open Graph (Facebook, LinkedIn, etc.) -->
+      <meta property="og:title" content="coherosphere – the sphere of coherence">
+      <meta property="og:description" content="A decentralized collective and resonance space for humanity, technology and values.">
+      <meta property="og:type" content="website">
+      <meta property="og:url" content="https://coherosphere.com">
+      <meta property="og:image" content="https://coherosphere.com/preview.png">
+      <!-- Twitter Card -->
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="coherosphere – the sphere of coherence">
+      <meta name="twitter:description" content="A decentralized collective and resonance space for humanity, technology and values.">
+      <meta name="twitter:image" content="https://coherosphere.com/preview.png">
+      <style>.wrap {
+         min-height: 100dvh;
+         display: flex;
+         flex-direction: column
+         }
+         .stage {
+         flex: 0 0 auto;
+         display: grid;
+         place-items: center;
+         padding: 24px;
+         gap: 24px
+         }
+         .btn,
+         a.btn,
+         footer.controls {
+         align-items: center;
+         justify-content: center
+         }
+         footer.controls {
+         margin-top: auto;
+         display: flex;
+         gap: 16px;
+         padding: 16px 24px;
+         border-top: 1px solid #eee;
+         background: #fafafa
+         }
+         svg {
+         width: min(92vw, 2100px);
+         height: auto;
+         max-height: calc(100dvh - 160px);
+         display: block
+         }
+         .btn,
+         a.btn {
+         display: inline-flex;
+         padding: 0 18px;
+         border: 0;
+         background-color: #1E3A5F;
+         color: #fff;
+         border-radius: 12px;
+         cursor: pointer;
+         font: 400 14px"Nunito Sans", Arial, sans-serif;
+         text-decoration: none;
+         transition: background .3s ease;
+         height: 40px;
+         line-height: 44px display: inline-flex;
+         justify-content: center;
+         width: 125px;
+         padding: 0;
+         }
+         .btn:hover,
+         a.btn:hover {
+         background: #ff6f3c;
+         color: #fff transition: background-color 0.3s ease;
+         }
+         .btn[disabled] {
+         opacity: .5;
+         cursor: default
+         }
+         .claim {
+         text-align: center;
+         font: 500 20px"Nunito Sans", Arial, sans-serif
+         }
+         :root {
+         --bg1: #fafbfc;
+         --bg2: #f2f4f7;
+         --color-humanity: #d1d5db;
+         --color-technology: #9ca3af;
+         --color-values: #6b7280;
+         --neutral: #d9e2ec
+         }
+         #bg {
+         position: fixed;
+         inset: 0;
+         z-index: -1;
+         width: 100vw;
+         height: 100vh;
+         display: block;
+         filter: brightness(118%) saturate(80%) contrast(90%)
+         }
+         @media (prefers-reduced-motion:reduce) {
+         #bg {
+         display: none
+         }
+         }
+         .changelog {
+         max-width: min(92vw, 2100px);
+         /* gleiche Breite wie Logo */
+         margin: 0 auto;
+         padding: 24px;
+         }
+         .changelog summary {
+         display: block;
+         text-align: center;
+         font: 600 16px "Nunito Sans", Arial, sans-serif;
+         cursor: pointer;
+         margin: 8px 0 12px;
+         }
+         .changelog summary::-webkit-details-marker {
+         display: none;
+         }
+         .changelog .changes {
+         list-style: none;
+         margin: 0;
+         padding: 0;
+         display: grid;
+         gap: 6px;
+         }
+         .changelog .changes li {
+         padding: 6px 0;
+         border: 0;
+         background: transparent;
+         border-radius: 0;
+         font: 400 14px "Nunito Sans", Arial, sans-serif;
+         }
+         .changelog summary::-webkit-details-marker {
+         display: none;
+         }
+         .changelog summary::marker {
+         content: "";
+         }
+         .changelog time {
+         font-weight: 400;
+         }
+         
+         #changes a {
+  color: #16395A;            /* Logo-Blau */
+  text-decoration: none;     /* Unterstreichung entfernen (optional) */
+  font-weight: 500;          /* etwas kräftiger (optional) */
+  transition: color 0.25s ease;
 }
 
-.stage {
-	flex: 0 0 auto;
-	display: grid;
-	place-items: center;
-	padding: 24px;
-	gap: 24px
+#changes a:hover {
+  color: #FF6F3C;            /* Orange beim Hover */
+  text-decoration: underline;/* Unterstreichung beim Hover (optional) */
 }
+      </style>
+   </head>
+   <body>
+      <!-- coherosphere WebGL background canvas -->
+      <canvas id="bg" aria-hidden="true"></canvas>
+      <div class="wrap">
+         <main class="stage">
+            <!-- Logo, orange „o“ audio-reactiv -->
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 1047.891 287" aria-label="Coherosphere Logo">
+               <defs>
+                  <clipPath id="clip_1">
+                     <path transform="matrix(1,0,0,-1,0,287)" d="M0 0H1047.891V287H0Z" />
+                  </clipPath>
+                  <path id="font_2_1" d="M.28199769-.009002686C.23333232-.009002686 .19132996 .001663208 .1559906 .022994996 .120661418 .044326784 .09349569 .074157718 .07449341 .11248779 .0555013 .15082805 .04600525 .19533284 .04600525 .2460022 .04600525 .29733277 .0555013 .34166465 .07449341 .3789978 .09349569 .41633097 .120661418 .44499717 .1559906 .46499635 .19132996 .4849955 .23333232 .49499513 .28199769 .49499513 .31199647 .49499513 .34165956 .48965965 .37098695 .47898866 .4003245 .46832786 .42466227 .45333354 .44400025 .43400575L.41600038 .375C.39666239 .3936666 .37549339 .40733338 .3524933 .41600038 .3294932 .42466737 .30766297 .42900086 .28700257 .42900086 .2363332 .42900086 .19733174 .41316734 .16999817 .38150025 .1426646 .34983317 .1289978 .30433146 .1289978 .24499512 .1289978 .18700154 .1426646 .14116924 .16999817 .10749817 .19733174 .07383728 .2363332 .057006837 .28700257 .057006837 .30766297 .057006837 .3294932 .061335248 .3524933 .069992069 .37549339 .07865906 .39666239 .09266154 .41600038 .11199951L.44400025 .052993776C.42466227 .033665975 .40016175 .01849874 .37049867 .0074920656 .34083558-.0035044354 .31133525-.009002686 .28199769-.009002686Z" />
+                  <path id="font_2_4" d="M.27799989-.009002686C.23066712-.009002686 .18966675 .0013275147 .15499878 .021987915 .12033081 .04265849 .09349569 .07182821 .07449341 .10949707 .0555013 .14716594 .04600525 .19166565 .04600525 .24299622 .04600525 .29433695 .0555013 .33883668 .07449341 .37649537 .09349569 .41416423 .12033081 .44332887 .15499878 .46398927 .18966675 .48465983 .23066712 .49499513 .27799989 .49499513 .32533265 .49499513 .366333 .48465983 .40100099 .46398927 .43566896 .44332887 .462499 .41416423 .4814911 .37649537 .50049337 .33883668 .5099945 .29433695 .5099945 .24299622 .5099945 .19166565 .50049337 .14716594 .4814911 .10949707 .462499 .07182821 .43566896 .04265849 .40100099 .021987915 .366333 .0013275147 .32533265-.009002686 .27799989-.009002686M.27799989 .055999757C.32400004 .055999757 .36049906 .0721639 .38749696 .10449219 .41449485 .13683065 .42799378 .18333435 .42799378 .2440033 .42799378 .30400086 .41449485 .34999595 .38749696 .38198854 .36049906 .4139913 .32400004 .42999269 .27799989 .42999269 .2326711 .42999269 .19633992 .4139913 .16900635 .38198854 .14167278 .34999595 .12800598 .30400086 .12800598 .2440033 .12800598 .18333435 .14167278 .13683065 .16900635 .10449219 .19633992 .0721639 .2326711 .055999757 .27799989 .055999757Z" />
+                  <path id="font_2_3" d="M.07600403 0V.70500186H.15699768V.37800599H.14399719C.15799459 .41667176 .18082683 .4458364 .2124939 .46549989 .24416097 .48516337 .28066508 .49499513 .32200624 .49499513 .360672 .49499513 .39283753 .48799644 .4185028 .47399903 .4441681 .46000163 .46333314 .4388326 .47599793 .41049195 .48866273 .38216148 .49499513 .34632875 .49499513 .30299378V0H.41400147V.29800416C.41400147 .32800294 .4101664 .35266624 .40249635 .37199403 .39483644 .391332 .38283793 .40566508 .36650086 .4149933 .3501638 .42433167 .32899476 .42900086 .30299378 .42900086 .27366639 .42900086 .2480011 .42266847 .22599793 .41000367 .20399475 .39733888 .18699138 .3796692 .1749878 .35699464 .16299439 .33433024 .15699768 .30766297 .15699768 .2769928V0H.07600403Z" />
+                  <path id="font_2_2" d="M.29499818-.009002686C.2436676-.009002686 .19949849 .0011647543 .16249085 .021499634 .12549336 .041834516 .09682719 .07066854 .07649231 .10800171 .056167604 .14533489 .04600525 .19000244 .04600525 .2420044 .04600525 .29266358 .05600484 .3368276 .07600403 .37449647 .09600321 .4121653 .12349955 .44166566 .15849304 .46299745 .1934967 .48432923 .23399861 .49499513 .27999879 .49499513 .32399497 .49499513 .36165873 .48532615 .3929901 .46598817 .42433167 .44666038 .4485016 .41932679 .46549989 .38398744 .48249818 .34865824 .4909973 .30633036 .4909973 .25700379V.22599793H.10800171V.27900697H.43699647L.42100526 .26600648C.42100526 .31933085 .40916953 .36082459 .38549806 .39048768 .36183677 .42016093 .32733665 .43499757 .28199769 .43499757 .2480011 .43499757 .21916707 .4271647 .1954956 .41149903 .1718343 .39583335 .15400188 .37416587 .14199829 .34649659 .1299947 .3188273 .12399292 .28666178 .12399292 .25V.2440033C.12399292 .20333354 .13049317 .16899617 .14349365 .14099121 .15649414 .11299642 .17599488 .09183248 .20199585 .07749939 .22799683 .0631663 .2589976 .055999757 .29499818 .055999757 .32366435 .055999757 .35149638 .060496015 .37849427 .069488529 .40550233 .07849121 .43100486 .09332784 .45500184 .11399841L.4830017 .057006837C.46099855 .03699748 .43299867 .020991007 .39900209 .008987427 .3650055-.0030059815 .33033753-.009002686 .29499818-.009002686Z" />
+                  <path id="font_2_6" d="M.07600403 0V.48599244H.15499878V.3710022H.14500427C.15633647 .4103292 .17599996 .44016014 .20399475 .460495 .23199971 .48082987 .2690023 .49266563 .31500245 .4960022L.34399415 .49899293 .3500061 .42900086 .29899598 .42300416C.2536672 .41900636 .21883647 .4045054 .19450379 .37950135 .1701711 .35449729 .15800476 .32032777 .15800476 .2769928V0H.07600403Z" />
+                  <path id="font_3_1" d="M.28799439-.009994507C.2373352-.009994507 .19333904 .00033569337 .15600586 .020996094 .11867269 .041666669 .089670818 .07116699 .069000247 .10949707 .04832967 .14783733 .037994386 .19300334 .037994386 .24499512 .037994386 .29699708 .04832967 .34199525 .069000247 .37998963 .089670818 .41799418 .11867269 .44732667 .15600586 .46798707 .19333904 .48865763 .2373352 .49899293 .28799439 .49899293 .33866374 .49899293 .382665 .48865763 .41999818 .46798707 .45733134 .44732667 .48632813 .41799418 .5069885 .37998963 .5276591 .34199525 .5379944 .29699708 .5379944 .24499512 .5379944 .19300334 .5276591 .14783733 .5069885 .10949707 .48632813 .07116699 .45733134 .041666669 .41999818 .020996094 .382665 .00033569337 .33866374-.009994507 .28799439-.009994507M.28799439 .085006717C.32532756 .085006717 .35532633 .09850565 .37799073 .12550354 .40066529 .15250142 .41200257 .19266765 .41200257 .2460022 .41200257 .29866538 .40066529 .33816529 .37799073 .36450196 .35532633 .39083863 .32532756 .40400697 .28799439 .40400697 .25066123 .40400697 .22066243 .39083863 .19799805 .36450196 .17533367 .33816529 .16400147 .29866538 .16400147 .2460022 .16400147 .19266765 .17533367 .15250142 .19799805 .12550354 .22066243 .09850565 .25066123 .085006717 .28799439 .085006717Z" />
+                  <path id="font_2_7" d="M.2400055-.009002686C.21466573-.009002686 .19016011-.006500244 .16648865-.0014953613 .14282735 .0034993489 .12082926 .010498047 .100494388 .019500733 .08016968 .028503418 .062672939 .03933716 .04800415 .052001954L.07400513 .10899353C.09000651 .096328739 .10734049 .08583069 .12600708 .07749939 .14467366 .06916809 .16367086 .06299845 .18299866 .05899048 .20233663 .054992677 .2220052 .052993776 .2420044 .052993776 .27999879 .052993776 .30865989 .059992475 .32798768 .07398987 .34732566 .08799744 .35699464 .10699972 .35699464 .1309967 .35699464 .14966329 .35066224 .16449483 .33799745 .17549134 .32533265 .186498 .30533348 .19500225 .27799989 .20100403L.18699646 .22099304C.1449941 .22966004 .11382548 .24465943 .0934906 .2659912 .07316589 .28733317 .06300354 .31500245 .06300354 .34899903 .06300354 .3789978 .07083639 .40483094 .086502078 .4264984 .10216776 .4481659 .1243337 .46499635 .15299988 .47698976 .18166606 .48899333 .21500142 .49499513 .25300599 .49499513 .27567039 .49499513 .29733277 .49266053 .31799317 .48799134 .33866374 .4833323 .35816447 .47650147 .37649537 .46749879 .39483644 .4584961 .41066996 .44733177 .42399598 .43400575L.39700318 .3769989C.38433839 .38900248 .37000529 .39916993 .3540039 .40750123 .33800254 .41583253 .3215027 .42216493 .3045044 .4264984 .2875061 .4308319 .27033998 .43299867 .25300599 .43299867 .2156728 .43299867 .18733724 .42566429 .16799927 .41099549 .14867147 .39633689 .13900757 .377004 .13900757 .35299684 .13900757 .33433024 .14500427 .31899516 .15699768 .30699159 .16900127 .29499818 .18766785 .28633628 .21299744 .28100587L.30400086 .2619934C.34733583 .2526652 .37983705 .23783367 .40150453 .21749878 .423172 .1971639 .43400575 .16966248 .43400575 .1349945 .43400575 .105667117 .42600505 .08016968 .41000367 .058502199 .3940023 .036834718 .37150065 .020167033 .34249879 .0084991459 .31349693-.003168742 .2793325-.009002686 .2400055-.009002686Z" />
+                  <path id="font_2_5" d="M.07600403-.17999268V.48599244H.15499878V.3710022H.14500427C.15566509 .40899659 .17682903 .4391581 .2084961 .46148683 .24016316 .48382569 .27799989 .49499513 .32200624 .49499513 .36533103 .49499513 .40315757 .48482768 .43548585 .4644928 .4678243 .4441681 .49282838 .4151713 .51049807 .37750245 .5281677 .3398336 .53700259 .29499818 .53700259 .24299622 .53700259 .19166565 .5281677 .14716594 .51049807 .10949707 .49282838 .07182821 .46799217 .04265849 .43598939 .021987915 .4039968 .0013275147 .3660024-.009002686 .32200624-.009002686 .27799989-.009002686 .24033101 .0021616619 .20899964 .024490357 .17766826 .046829225 .15633647 .076665248 .14500427 .11399841H.15699768V-.17999268H.07600403M.30499269 .055999757C.35099284 .055999757 .38749186 .0721639 .41448976 .10449219 .4414978 .13683065 .45500184 .18299866 .45500184 .24299622 .45500184 .30366517 .4414978 .34999595 .41448976 .38198854 .38749186 .4139913 .35099284 .42999269 .30499269 .42999269 .2596639 .42999269 .22333272 .4139913 .19599915 .38198854 .16866558 .34999595 .15499878 .30366517 .15499878 .24299622 .15499878 .18299866 .16866558 .13683065 .19599915 .10449219 .22333272 .0721639 .2596639 .055999757 .30499269 .055999757Z" />
+                  <clipPath id="clip_4">
+                     <path transform="matrix(1,0,0,-1,0,287)" d="M455.9879 155.5615H496.09657V179.45781H455.9879Z" />
+                  </clipPath>
+                  <clipPath id="clip_5">
+                     <path transform="matrix(1,0,0,-1,0,287)" d="M469.7644 168.7584H496.41334V185.33159H469.7644Z" />
+                  </clipPath>
+                  <clipPath id="clip_6">
+                     <path transform="matrix(1,0,0,-1,0,287)" d="M416.3987 82.44923H456.08979V103.96127H416.3987Z" />
+                  </clipPath>
+                  <clipPath id="clip_7">
+                     <path transform="matrix(1,0,0,-1,0,287)" d="M416.0484 74.88531H445.62495V90.97226H416.0484Z" />
+                  </clipPath>
+               </defs>
+               <g clip-path="url(#clip_1)">
+                  <use data-text="c" xlink:href="#font_2_1" transform="matrix(150,0,0,-150,41,193.05048)" fill="#123b62" />
+                  <use data-text="o" xlink:href="#font_2_4" transform="matrix(150,0,0,-150,108.950008,193.05048)" fill="#123b62" />
+                  <use data-text="h" xlink:href="#font_2_3" transform="matrix(150,0,0,-150,192.335,193.05048)" fill="#123b62" />
+                  <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,277.535,193.05048)" fill="#123b62" />
+                  <use data-text="r" xlink:href="#font_2_6" transform="matrix(150,0,0,-150,357.32,193.05048)" fill="#123b62" />
+                  <!-- ORANGE O: Wrapper + inner group -->
+                  <g id="coreWrapper" transform="matrix(150,0,0,-150,410.9516,193.05048)">
+                     <g id="coreGroup">
+                        <use data-text="o" xlink:href="#font_3_1" fill="#ff6f3c" />
+                     </g>
+                  </g>
+                  <use data-text="s" xlink:href="#font_2_7" transform="matrix(150,0,0,-150,497.3516,193.05048)" fill="#1e3a5f" />
+                  <use data-text="p" xlink:href="#font_2_5" transform="matrix(150,0,0,-150,569.5166,193.05048)" fill="#1e3a5f" />
+                  <use data-text="h" xlink:href="#font_2_3" transform="matrix(150,0,0,-150,656.9666,193.05048)" fill="#1e3a5f" />
+                  <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,742.1666,193.05048)" fill="#1e3a5f" />
+                  <use data-text="r" xlink:href="#font_2_6" transform="matrix(150,0,0,-150,821.9516,193.05048)" fill="#1e3a5f" />
+                  <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,874.61666,193.05048)" fill="#1e3a5f" />
+               </g>
+               <g clip-path="url(#clip_4)">
+                  <path transform="matrix(1,0,0,1,457.0333,110.041507)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C17.60679 .5322765 29.856 7.091082 36.74763 19.67642" />
+               </g>
+               <g clip-path="url(#clip_5)">
+                  <path transform="matrix(1,0,0,1,470.9787,104.15311)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C10.43281 1.50546 18.18072 5.564304 23.24374 12.17653" />
+               </g>
+               <g clip-path="url(#clip_6)">
+                  <path transform="matrix(1,0,0,1,418.6324,184.8919)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C8.148087 11.78461 20.28955 17.49902 36.42438 17.14322" />
+               </g>
+               <g clip-path="url(#clip_7)">
+                  <path transform="matrix(1,0,0,1,418.0633,198.1323)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C8.01959 7.36931 16.85864 11.197 26.51715 11.48306" />
+               </g>
+            </svg>
+         </main>
+         <p class="claim">
+            <em>«ko-HER-o-sphere»</em> – the Sphere of Coherence – where humanity, technology, values resonate.
+         </p>
+       <section class="changelog" aria-labelledby="changelog-title">
+            <details>
+               <summary id="changelog-title">Changelog</summary>
+               <ul id="changes" class="changes"></ul>
+            </details>
+         </section>
+         <footer class="controls">
+            <audio id="audio" src="manifesto.mp3" preload="auto" playsinline></audio>
+            <button id="play" class="btn">▶ manifesto</button>
+            <a href="https://uniscan.cc/inscription/106004490" target="_blank" class="btn">on chain</a>
+            <a href="https://nostr.band/npub1kc9weag9hjf0p0xz5naamts48rdkzymucvrd9ws8ns7n4x3qq5gsljlnck" target="_blank" class="btn">nostr</a>
+         </footer>
+      </div>
+      <script>
+         const group = document.getElementById('coreGroup');
+         const audio = document.getElementById('audio');
+         const btnPlay = document.getElementById('play');
+         const toast = document.getElementById('toast');
+         // middle
+         let bbox = group.getBBox();
+         let cx = bbox.x + bbox.width / 2;
+         let cy = bbox.y + bbox.height / 2;
+         let ctx, src, analyser, raf, env = 0,
+           isPlaying = false;
+         
+         function setup() {
+           ctx = ctx || new(window.AudioContext || window.webkitAudioContext)();
+           if (src) try {
+             src.disconnect();
+           } catch {}
+           if (analyser) try {
+             analyser.disconnect();
+           } catch {}
+           src = ctx.createMediaElementSource(audio);
+           analyser = ctx.createAnalyser();
+           analyser.fftSize = 1024;
+           analyser.smoothingTimeConstant = 0.0;
+           src.connect(analyser);
+           analyser.connect(ctx.destination);
+         }
+         
+         function rms() {
+           const td = new Uint8Array(analyser.fftSize);
+           analyser.getByteTimeDomainData(td);
+           let s = 0;
+           for (let i = 0; i < td.length; i++) {
+             const v = (td[i] - 128) / 128;
+             s += v * v;
+           }
+           return Math.sqrt(s / td.length);
+         }
+         
+         function animate() {
+           const SENS = 1.20,
+             SMOOTH = 0.75,
+             MAX = 1.52;
+           env = env * SMOOTH + rms() * SENS * (1 - SMOOTH);
+           const clamped = Math.min(env, 1.2);
+           const scale = 1 + (MAX - 1) * (clamped / 1.2);
+           group.setAttribute('transform', `translate(${cx},${cy}) scale(${scale}) translate(${-cx},${-cy})`);
+           raf = requestAnimationFrame(animate);
+         }
+         // Autoplay (stumm)
+         window.addEventListener('load', async () => {
+           try {
+             audio.muted = true;
+             await audio.play(); // kann scheitern
+             if (!ctx) setup();
+             if (!raf) animate();
+             toast.textContent = ""; // läuft stumm
+           } catch (e) {
+             // blockiert; warten auf Button
+           }
+         });
+         // Button: Play/Pause toggeln
+         btnPlay.addEventListener('click', async () => {
+           try {
+             if (!ctx) setup();
+             if (ctx.state === 'suspended') await ctx.resume();
+             if (!isPlaying) {
+               // starten
+               if (audio.paused) await audio.play();
+               audio.muted = false; // entmuten
+               if (!raf) animate();
+               isPlaying = true;
+               btnPlay.textContent = "⏸ pause";
+               toast.textContent = "";
+             } else {
+               // pausieren
+               audio.pause();
+               if (raf) cancelAnimationFrame(raf);
+               raf = null;
+               isPlaying = false;
+               btnPlay.textContent = "▶ manifesto";
+               group.removeAttribute('transform');
+               env = 0;
+             }
+           } catch (e) {
+             toast.textContent = "Audio could not be started (check sound.mp3).";
+             console.error(e);
+           }
+         });
+      </script>
+      <!-- coherosphere WebGL background (Three.js) -->
+      <script type="module">
+         import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+         const CONFIG = {
+           particleCount: 2600,
+           sphereRadius: 5.5,
+           baseSpeed: 0.06,
+           waveAmp: 0.18,
+           waveFreq: 0.9,
+           glowStrength: 0.25,
+           colorHumanity: getCssVar('--color-humanity'),
+           colorTechnology: getCssVar('--color-technology'),
+           colorValues: getCssVar('--color-values'),
+           colorNeutral: getCssVar('--neutral'),
+           bgTone: getCssVar('--bg1'),
+           dprMax: 1.6,
+         };
+         
+         function getCssVar(name) {
+           return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+         }
+         const canvas = document.getElementById('bg');
+         const renderer = new THREE.WebGLRenderer({
+           canvas,
+           antialias: true,
+           alpha: true,
+           powerPreference: 'high-performance'
+         });
+         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CONFIG.dprMax));
+         const scene = new THREE.Scene();
+         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+         camera.position.set(0, 0, 8);
+         const hemi = new THREE.HemisphereLight(0xffffff, 0xfafcff, 0.95);
+         scene.add(hemi);
+         const dir = new THREE.DirectionalLight(0xffffff, 0.35);
+         dir.position.set(2, 3, 2);
+         scene.add(dir);
+         scene.fog = new THREE.Fog(CONFIG.bgTone, 16, 28);
+         const geometry = new THREE.BufferGeometry();
+         const positions = new Float32Array(CONFIG.particleCount * 3);
+         const colors = new Float32Array(CONFIG.particleCount * 3);
+         const sizes = new Float32Array(CONFIG.particleCount);
+         const colHumanity = new THREE.Color(CONFIG.colorHumanity);
+         const colTechnology = new THREE.Color(CONFIG.colorTechnology);
+         const colValues = new THREE.Color(CONFIG.colorValues);
+         const colNeutral = new THREE.Color(CONFIG.colorNeutral);
+         for (let i = 0; i < CONFIG.particleCount; i++) {
+           const u = Math.random();
+           const v = Math.random();
+           const theta = 2 * Math.PI * u;
+           const phi = Math.acos(2 * v - 1);
+           const r = CONFIG.sphereRadius * (0.8 + Math.random() * 0.4);
+           const x = r * Math.sin(phi) * Math.cos(theta);
+           const y = r * Math.cos(phi);
+           const z = r * Math.sin(phi) * Math.sin(theta);
+           positions[i * 3 + 0] = x;
+           positions[i * 3 + 1] = y;
+           positions[i * 3 + 2] = z;
+           const t = Math.random();
+           let c;
+           if (t < 0.08) {
+             c = colHumanity.clone().lerp(colNeutral, 0.6);
+           } else if (t < 0.16) {
+             c = colTechnology.clone().lerp(colNeutral, 0.6);
+           } else if (t < 0.24) {
+             c = colValues.clone().lerp(colNeutral, 0.6);
+           } else {
+             c = colNeutral;
+           }
+           colors[i * 3 + 0] = c.r;
+           colors[i * 3 + 1] = c.g;
+           colors[i * 3 + 2] = c.b;
+           sizes[i] = 0.7 + Math.random() * 1.0;
+         }
+         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+         geometry.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
+         geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+         const material = new THREE.ShaderMaterial({
+           transparent: true,
+           depthWrite: false,
+           uniforms: {
+             time: {
+               value: 0
+             },
+             glow: {
+               value: CONFIG.glowStrength
+             }
+           },
+           vertexShader: /* glsl */ `
+           uniform float time; attribute float size; attribute vec3 customColor; varying vec3 vColor; varying float vAlpha;
+           void main(){
+             vColor = customColor;
+             vec3 p = position;
+             float d = length(p);
+             float n = sin((d*1.4) + time*0.9);
+             float amp = 0.18;
+             p += normalize(p) * n * amp;
+         
+             p.x += sin(time*0.15 + position.y*0.12)*0.012;
+             p.y += cos(time*0.16 + position.z*0.14)*0.012;
+         
+             vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+             gl_PointSize = size * ( 85.0 / -mvPosition.z );
+             vAlpha = 0.3 + 0.2*sin(time*0.5 + position.x*0.08);
+             gl_Position = projectionMatrix * mvPosition;
+           }
+         `,
+           fragmentShader: /* glsl */ `
+           uniform float glow; varying vec3 vColor; varying float vAlpha;
+           void main(){
+             float d = length(gl_PointCoord - vec2(0.5));
+             float a = smoothstep(0.65, 0.0, d);
+             float halo = smoothstep(0.8, 0.0, d) * glow * 0.5;
+             vec3 col = vColor * (1.0 + halo);
+             gl_FragColor = vec4(col, a * vAlpha);
+           }
+         `
+         });
+         const points = new THREE.Points(geometry, material);
+         scene.add(points);
+         
+         function onResize() {
+           const w = window.innerWidth;
+           const h = window.innerHeight;
+           renderer.setSize(w, h, false);
+           camera.aspect = w / h;
+           camera.updateProjectionMatrix();
+         }
+         window.addEventListener('resize', onResize, {
+           passive: true
+         });
+         onResize();
+         
+         function animate() {
+           material.uniforms.time.value += 0.016;
+           points.rotation.y += CONFIG.baseSpeed * 0.004;
+           renderer.render(scene, camera);
+           requestAnimationFrame(animate);
+         }
+         animate();
+         
+         </script>
 
-.btn,
-a.btn,
-footer.controls {
-	align-items: center;
-	justify-content: center
-}
-
-footer.controls {
-	margin-top: auto;
-	display: flex;
-	gap: 16px;
-	padding: 16px 24px;
-	border-top: 1px solid #eee;
-	background: #fafafa
-}
-
-svg {
-	width: min(92vw, 2100px);
-	height: auto;
-	max-height: calc(100dvh - 160px);
-	display: block
-}
-
-.btn,
-a.btn {
-	display: inline-flex;
-	padding: 0 18px;
-	border: 0;
-	background-color: #1E3A5F;
-	color: #fff;
-	border-radius: 12px;
-	cursor: pointer;
-	font: 400 14px"Nunito Sans", Arial, sans-serif;
-	text-decoration: none;
-	transition: background .3s ease;
-	height: 40px;
-	line-height: 44px display: inline-flex;
-	justify-content: center;
-	width: 125px;
-	padding: 0;
-}
-
-.btn:hover,
-a.btn:hover {
-	background: #ff6f3c;
-	color: #fff transition: background-color 0.3s ease;
-}
-
-.btn[disabled] {
-	opacity: .5;
-	cursor: default
-}
-
-.claim {
-	text-align: center;
-	font: 500 20px"Nunito Sans", Arial, sans-serif
-}
-
-:root {
-	--bg1: #fafbfc;
-	--bg2: #f2f4f7;
-	--color-humanity: #d1d5db;
-	--color-technology: #9ca3af;
-	--color-values: #6b7280;
-	--neutral: #d9e2ec
-}
-
-#bg {
-	position: fixed;
-	inset: 0;
-	z-index: -1;
-	width: 100vw;
-	height: 100vh;
-	display: block;
-	filter: brightness(118%) saturate(80%) contrast(90%)
-}
-
-@media (prefers-reduced-motion:reduce) {
-	#bg {
-		display: none
-	}
-}
-
-.changelog {
-	max-width: min(92vw, 2100px);
-	/* gleiche Breite wie Logo */
-	margin: 0 auto;
-	padding: 24px;
-}
-
-.changelog summary {
-	display: block;
-	text-align: center;
-	font: 600 16px "Nunito Sans", Arial, sans-serif;
-	cursor: pointer;
-	margin: 8px 0 12px;
-}
-
-.changelog summary::-webkit-details-marker {
-	display: none;
-}
-
-.changelog .changes {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: 6px;
-}
-
-.changelog .changes li {
-	padding: 6px 0;
-	border: 0;
-	background: transparent;
-	border-radius: 0;
-	font: 400 14px "Nunito Sans", Arial, sans-serif;
-}
-
-.changelog summary::-webkit-details-marker {
-	display: none;
-}
-
-.changelog summary::marker {
-	content: "";
-}
-
-
-.changelog time {
-	font-weight: 600;
-}
-
-</style>
-
-  </head>
-  <body>
-    <!-- coherosphere WebGL background canvas -->
-    <canvas id="bg" aria-hidden="true"></canvas>
-    <div class="wrap">
-      <main class="stage">
-        <!-- Logo, orange „o“ audio-reactiv -->
-        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 1047.891 287" aria-label="Coherosphere Logo">
-          <defs>
-            <clipPath id="clip_1">
-              <path transform="matrix(1,0,0,-1,0,287)" d="M0 0H1047.891V287H0Z" />
-            </clipPath>
-            <path id="font_2_1" d="M.28199769-.009002686C.23333232-.009002686 .19132996 .001663208 .1559906 .022994996 .120661418 .044326784 .09349569 .074157718 .07449341 .11248779 .0555013 .15082805 .04600525 .19533284 .04600525 .2460022 .04600525 .29733277 .0555013 .34166465 .07449341 .3789978 .09349569 .41633097 .120661418 .44499717 .1559906 .46499635 .19132996 .4849955 .23333232 .49499513 .28199769 .49499513 .31199647 .49499513 .34165956 .48965965 .37098695 .47898866 .4003245 .46832786 .42466227 .45333354 .44400025 .43400575L.41600038 .375C.39666239 .3936666 .37549339 .40733338 .3524933 .41600038 .3294932 .42466737 .30766297 .42900086 .28700257 .42900086 .2363332 .42900086 .19733174 .41316734 .16999817 .38150025 .1426646 .34983317 .1289978 .30433146 .1289978 .24499512 .1289978 .18700154 .1426646 .14116924 .16999817 .10749817 .19733174 .07383728 .2363332 .057006837 .28700257 .057006837 .30766297 .057006837 .3294932 .061335248 .3524933 .069992069 .37549339 .07865906 .39666239 .09266154 .41600038 .11199951L.44400025 .052993776C.42466227 .033665975 .40016175 .01849874 .37049867 .0074920656 .34083558-.0035044354 .31133525-.009002686 .28199769-.009002686Z" />
-            <path id="font_2_4" d="M.27799989-.009002686C.23066712-.009002686 .18966675 .0013275147 .15499878 .021987915 .12033081 .04265849 .09349569 .07182821 .07449341 .10949707 .0555013 .14716594 .04600525 .19166565 .04600525 .24299622 .04600525 .29433695 .0555013 .33883668 .07449341 .37649537 .09349569 .41416423 .12033081 .44332887 .15499878 .46398927 .18966675 .48465983 .23066712 .49499513 .27799989 .49499513 .32533265 .49499513 .366333 .48465983 .40100099 .46398927 .43566896 .44332887 .462499 .41416423 .4814911 .37649537 .50049337 .33883668 .5099945 .29433695 .5099945 .24299622 .5099945 .19166565 .50049337 .14716594 .4814911 .10949707 .462499 .07182821 .43566896 .04265849 .40100099 .021987915 .366333 .0013275147 .32533265-.009002686 .27799989-.009002686M.27799989 .055999757C.32400004 .055999757 .36049906 .0721639 .38749696 .10449219 .41449485 .13683065 .42799378 .18333435 .42799378 .2440033 .42799378 .30400086 .41449485 .34999595 .38749696 .38198854 .36049906 .4139913 .32400004 .42999269 .27799989 .42999269 .2326711 .42999269 .19633992 .4139913 .16900635 .38198854 .14167278 .34999595 .12800598 .30400086 .12800598 .2440033 .12800598 .18333435 .14167278 .13683065 .16900635 .10449219 .19633992 .0721639 .2326711 .055999757 .27799989 .055999757Z" />
-            <path id="font_2_3" d="M.07600403 0V.70500186H.15699768V.37800599H.14399719C.15799459 .41667176 .18082683 .4458364 .2124939 .46549989 .24416097 .48516337 .28066508 .49499513 .32200624 .49499513 .360672 .49499513 .39283753 .48799644 .4185028 .47399903 .4441681 .46000163 .46333314 .4388326 .47599793 .41049195 .48866273 .38216148 .49499513 .34632875 .49499513 .30299378V0H.41400147V.29800416C.41400147 .32800294 .4101664 .35266624 .40249635 .37199403 .39483644 .391332 .38283793 .40566508 .36650086 .4149933 .3501638 .42433167 .32899476 .42900086 .30299378 .42900086 .27366639 .42900086 .2480011 .42266847 .22599793 .41000367 .20399475 .39733888 .18699138 .3796692 .1749878 .35699464 .16299439 .33433024 .15699768 .30766297 .15699768 .2769928V0H.07600403Z" />
-            <path id="font_2_2" d="M.29499818-.009002686C.2436676-.009002686 .19949849 .0011647543 .16249085 .021499634 .12549336 .041834516 .09682719 .07066854 .07649231 .10800171 .056167604 .14533489 .04600525 .19000244 .04600525 .2420044 .04600525 .29266358 .05600484 .3368276 .07600403 .37449647 .09600321 .4121653 .12349955 .44166566 .15849304 .46299745 .1934967 .48432923 .23399861 .49499513 .27999879 .49499513 .32399497 .49499513 .36165873 .48532615 .3929901 .46598817 .42433167 .44666038 .4485016 .41932679 .46549989 .38398744 .48249818 .34865824 .4909973 .30633036 .4909973 .25700379V.22599793H.10800171V.27900697H.43699647L.42100526 .26600648C.42100526 .31933085 .40916953 .36082459 .38549806 .39048768 .36183677 .42016093 .32733665 .43499757 .28199769 .43499757 .2480011 .43499757 .21916707 .4271647 .1954956 .41149903 .1718343 .39583335 .15400188 .37416587 .14199829 .34649659 .1299947 .3188273 .12399292 .28666178 .12399292 .25V.2440033C.12399292 .20333354 .13049317 .16899617 .14349365 .14099121 .15649414 .11299642 .17599488 .09183248 .20199585 .07749939 .22799683 .0631663 .2589976 .055999757 .29499818 .055999757 .32366435 .055999757 .35149638 .060496015 .37849427 .069488529 .40550233 .07849121 .43100486 .09332784 .45500184 .11399841L.4830017 .057006837C.46099855 .03699748 .43299867 .020991007 .39900209 .008987427 .3650055-.0030059815 .33033753-.009002686 .29499818-.009002686Z" />
-            <path id="font_2_6" d="M.07600403 0V.48599244H.15499878V.3710022H.14500427C.15633647 .4103292 .17599996 .44016014 .20399475 .460495 .23199971 .48082987 .2690023 .49266563 .31500245 .4960022L.34399415 .49899293 .3500061 .42900086 .29899598 .42300416C.2536672 .41900636 .21883647 .4045054 .19450379 .37950135 .1701711 .35449729 .15800476 .32032777 .15800476 .2769928V0H.07600403Z" />
-            <path id="font_3_1" d="M.28799439-.009994507C.2373352-.009994507 .19333904 .00033569337 .15600586 .020996094 .11867269 .041666669 .089670818 .07116699 .069000247 .10949707 .04832967 .14783733 .037994386 .19300334 .037994386 .24499512 .037994386 .29699708 .04832967 .34199525 .069000247 .37998963 .089670818 .41799418 .11867269 .44732667 .15600586 .46798707 .19333904 .48865763 .2373352 .49899293 .28799439 .49899293 .33866374 .49899293 .382665 .48865763 .41999818 .46798707 .45733134 .44732667 .48632813 .41799418 .5069885 .37998963 .5276591 .34199525 .5379944 .29699708 .5379944 .24499512 .5379944 .19300334 .5276591 .14783733 .5069885 .10949707 .48632813 .07116699 .45733134 .041666669 .41999818 .020996094 .382665 .00033569337 .33866374-.009994507 .28799439-.009994507M.28799439 .085006717C.32532756 .085006717 .35532633 .09850565 .37799073 .12550354 .40066529 .15250142 .41200257 .19266765 .41200257 .2460022 .41200257 .29866538 .40066529 .33816529 .37799073 .36450196 .35532633 .39083863 .32532756 .40400697 .28799439 .40400697 .25066123 .40400697 .22066243 .39083863 .19799805 .36450196 .17533367 .33816529 .16400147 .29866538 .16400147 .2460022 .16400147 .19266765 .17533367 .15250142 .19799805 .12550354 .22066243 .09850565 .25066123 .085006717 .28799439 .085006717Z" />
-            <path id="font_2_7" d="M.2400055-.009002686C.21466573-.009002686 .19016011-.006500244 .16648865-.0014953613 .14282735 .0034993489 .12082926 .010498047 .100494388 .019500733 .08016968 .028503418 .062672939 .03933716 .04800415 .052001954L.07400513 .10899353C.09000651 .096328739 .10734049 .08583069 .12600708 .07749939 .14467366 .06916809 .16367086 .06299845 .18299866 .05899048 .20233663 .054992677 .2220052 .052993776 .2420044 .052993776 .27999879 .052993776 .30865989 .059992475 .32798768 .07398987 .34732566 .08799744 .35699464 .10699972 .35699464 .1309967 .35699464 .14966329 .35066224 .16449483 .33799745 .17549134 .32533265 .186498 .30533348 .19500225 .27799989 .20100403L.18699646 .22099304C.1449941 .22966004 .11382548 .24465943 .0934906 .2659912 .07316589 .28733317 .06300354 .31500245 .06300354 .34899903 .06300354 .3789978 .07083639 .40483094 .086502078 .4264984 .10216776 .4481659 .1243337 .46499635 .15299988 .47698976 .18166606 .48899333 .21500142 .49499513 .25300599 .49499513 .27567039 .49499513 .29733277 .49266053 .31799317 .48799134 .33866374 .4833323 .35816447 .47650147 .37649537 .46749879 .39483644 .4584961 .41066996 .44733177 .42399598 .43400575L.39700318 .3769989C.38433839 .38900248 .37000529 .39916993 .3540039 .40750123 .33800254 .41583253 .3215027 .42216493 .3045044 .4264984 .2875061 .4308319 .27033998 .43299867 .25300599 .43299867 .2156728 .43299867 .18733724 .42566429 .16799927 .41099549 .14867147 .39633689 .13900757 .377004 .13900757 .35299684 .13900757 .33433024 .14500427 .31899516 .15699768 .30699159 .16900127 .29499818 .18766785 .28633628 .21299744 .28100587L.30400086 .2619934C.34733583 .2526652 .37983705 .23783367 .40150453 .21749878 .423172 .1971639 .43400575 .16966248 .43400575 .1349945 .43400575 .105667117 .42600505 .08016968 .41000367 .058502199 .3940023 .036834718 .37150065 .020167033 .34249879 .0084991459 .31349693-.003168742 .2793325-.009002686 .2400055-.009002686Z" />
-            <path id="font_2_5" d="M.07600403-.17999268V.48599244H.15499878V.3710022H.14500427C.15566509 .40899659 .17682903 .4391581 .2084961 .46148683 .24016316 .48382569 .27799989 .49499513 .32200624 .49499513 .36533103 .49499513 .40315757 .48482768 .43548585 .4644928 .4678243 .4441681 .49282838 .4151713 .51049807 .37750245 .5281677 .3398336 .53700259 .29499818 .53700259 .24299622 .53700259 .19166565 .5281677 .14716594 .51049807 .10949707 .49282838 .07182821 .46799217 .04265849 .43598939 .021987915 .4039968 .0013275147 .3660024-.009002686 .32200624-.009002686 .27799989-.009002686 .24033101 .0021616619 .20899964 .024490357 .17766826 .046829225 .15633647 .076665248 .14500427 .11399841H.15699768V-.17999268H.07600403M.30499269 .055999757C.35099284 .055999757 .38749186 .0721639 .41448976 .10449219 .4414978 .13683065 .45500184 .18299866 .45500184 .24299622 .45500184 .30366517 .4414978 .34999595 .41448976 .38198854 .38749186 .4139913 .35099284 .42999269 .30499269 .42999269 .2596639 .42999269 .22333272 .4139913 .19599915 .38198854 .16866558 .34999595 .15499878 .30366517 .15499878 .24299622 .15499878 .18299866 .16866558 .13683065 .19599915 .10449219 .22333272 .0721639 .2596639 .055999757 .30499269 .055999757Z" />
-            <clipPath id="clip_4">
-              <path transform="matrix(1,0,0,-1,0,287)" d="M455.9879 155.5615H496.09657V179.45781H455.9879Z" />
-            </clipPath>
-            <clipPath id="clip_5">
-              <path transform="matrix(1,0,0,-1,0,287)" d="M469.7644 168.7584H496.41334V185.33159H469.7644Z" />
-            </clipPath>
-            <clipPath id="clip_6">
-              <path transform="matrix(1,0,0,-1,0,287)" d="M416.3987 82.44923H456.08979V103.96127H416.3987Z" />
-            </clipPath>
-            <clipPath id="clip_7">
-              <path transform="matrix(1,0,0,-1,0,287)" d="M416.0484 74.88531H445.62495V90.97226H416.0484Z" />
-            </clipPath>
-          </defs>
-          <g clip-path="url(#clip_1)">
-            <use data-text="c" xlink:href="#font_2_1" transform="matrix(150,0,0,-150,41,193.05048)" fill="#123b62" />
-            <use data-text="o" xlink:href="#font_2_4" transform="matrix(150,0,0,-150,108.950008,193.05048)" fill="#123b62" />
-            <use data-text="h" xlink:href="#font_2_3" transform="matrix(150,0,0,-150,192.335,193.05048)" fill="#123b62" />
-            <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,277.535,193.05048)" fill="#123b62" />
-            <use data-text="r" xlink:href="#font_2_6" transform="matrix(150,0,0,-150,357.32,193.05048)" fill="#123b62" />
-            <!-- ORANGE O: Wrapper + inner group -->
-            <g id="coreWrapper" transform="matrix(150,0,0,-150,410.9516,193.05048)">
-              <g id="coreGroup">
-                <use data-text="o" xlink:href="#font_3_1" fill="#ff6f3c" />
-              </g>
-            </g>
-            <use data-text="s" xlink:href="#font_2_7" transform="matrix(150,0,0,-150,497.3516,193.05048)" fill="#1e3a5f" />
-            <use data-text="p" xlink:href="#font_2_5" transform="matrix(150,0,0,-150,569.5166,193.05048)" fill="#1e3a5f" />
-            <use data-text="h" xlink:href="#font_2_3" transform="matrix(150,0,0,-150,656.9666,193.05048)" fill="#1e3a5f" />
-            <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,742.1666,193.05048)" fill="#1e3a5f" />
-            <use data-text="r" xlink:href="#font_2_6" transform="matrix(150,0,0,-150,821.9516,193.05048)" fill="#1e3a5f" />
-            <use data-text="e" xlink:href="#font_2_2" transform="matrix(150,0,0,-150,874.61666,193.05048)" fill="#1e3a5f" />
-          </g>
-          <g clip-path="url(#clip_4)">
-            <path transform="matrix(1,0,0,1,457.0333,110.041507)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C17.60679 .5322765 29.856 7.091082 36.74763 19.67642" />
-          </g>
-          <g clip-path="url(#clip_5)">
-            <path transform="matrix(1,0,0,1,470.9787,104.15311)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C10.43281 1.50546 18.18072 5.564304 23.24374 12.17653" />
-          </g>
-          <g clip-path="url(#clip_6)">
-            <path transform="matrix(1,0,0,1,418.6324,184.8919)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C8.148087 11.78461 20.28955 17.49902 36.42438 17.14322" />
-          </g>
-          <g clip-path="url(#clip_7)">
-            <path transform="matrix(1,0,0,1,418.0633,198.1323)" stroke-width="3" stroke="#ff6f3c" fill="none" d="M0 0C8.01959 7.36931 16.85864 11.197 26.51715 11.48306" />
-          </g>
-        </svg>
-      </main>
-      <p class="claim">
-        <em>«ko-HER-o-sphere»</em> – the Sphere of Coherence – where humanity, technology, values resonate.
-      </p>
-      
-<section class="changelog" aria-labelledby="changelog-title">
-  <details>
-    <summary id="changelog-title">Changelog</summary>
-    <ul id="changes" class="changes"></ul>
-  </details>
-</section>
-      
-      <footer class="controls">
-        <audio id="audio" src="manifesto.mp3" preload="auto" playsinline></audio>
-        <button id="play" class="btn">▶ manifesto</button>
-      
-        <a href="https://nostr.band/npub1kc9weag9hjf0p0xz5naamts48rdkzymucvrd9ws8ns7n4x3qq5gsljlnck" target="_blank" class="btn">onchain</a>
-        <a href="https://mempool.space/address/bc1psl8hsdw4695uxksxryyk4sduqanmxv67lfesvqml20um0mnnykkqstrcya" target="_blank" class="btn">treasury</a>
-        <a href="https://nostr.band/npub1kc9weag9hjf0p0xz5naamts48rdkzymucvrd9ws8ns7n4x3qq5gsljlnck" target="_blank" class="btn">nostr</a>
-      </footer>
-    </div>
-    <script>
-      const group = document.getElementById('coreGroup');
-      const audio = document.getElementById('audio');
-      const btnPlay = document.getElementById('play');
-      const toast = document.getElementById('toast');
-      // middle
-      let bbox = group.getBBox();
-      let cx = bbox.x + bbox.width / 2;
-      let cy = bbox.y + bbox.height / 2;
-      let ctx, src, analyser, raf, env = 0,
-        isPlaying = false;
-
-      function setup() {
-        ctx = ctx || new(window.AudioContext || window.webkitAudioContext)();
-        if (src) try {
-          src.disconnect();
-        } catch {}
-        if (analyser) try {
-          analyser.disconnect();
-        } catch {}
-        src = ctx.createMediaElementSource(audio);
-        analyser = ctx.createAnalyser();
-        analyser.fftSize = 1024;
-        analyser.smoothingTimeConstant = 0.0;
-        src.connect(analyser);
-        analyser.connect(ctx.destination);
-      }
-
-      function rms() {
-        const td = new Uint8Array(analyser.fftSize);
-        analyser.getByteTimeDomainData(td);
-        let s = 0;
-        for (let i = 0; i < td.length; i++) {
-          const v = (td[i] - 128) / 128;
-          s += v * v;
-        }
-        return Math.sqrt(s / td.length);
-      }
-
-      function animate() {
-        const SENS = 1.20,
-          SMOOTH = 0.75,
-          MAX = 1.52;
-        env = env * SMOOTH + rms() * SENS * (1 - SMOOTH);
-        const clamped = Math.min(env, 1.2);
-        const scale = 1 + (MAX - 1) * (clamped / 1.2);
-        group.setAttribute('transform', `translate(${cx},${cy}) scale(${scale}) translate(${-cx},${-cy})`);
-        raf = requestAnimationFrame(animate);
-      }
-      // Autoplay (stumm)
-      window.addEventListener('load', async () => {
-        try {
-          audio.muted = true;
-          await audio.play(); // kann scheitern
-          if (!ctx) setup();
-          if (!raf) animate();
-          toast.textContent = ""; // läuft stumm
-        } catch (e) {
-          // blockiert; warten auf Button
-        }
-      });
-      // Button: Play/Pause toggeln
-      btnPlay.addEventListener('click', async () => {
-        try {
-          if (!ctx) setup();
-          if (ctx.state === 'suspended') await ctx.resume();
-          if (!isPlaying) {
-            // starten
-            if (audio.paused) await audio.play();
-            audio.muted = false; // entmuten
-            if (!raf) animate();
-            isPlaying = true;
-            btnPlay.textContent = "⏸ pause";
-            toast.textContent = "";
-          } else {
-            // pausieren
-            audio.pause();
-            if (raf) cancelAnimationFrame(raf);
-            raf = null;
-            isPlaying = false;
-            btnPlay.textContent = "▶ manifesto";
-            group.removeAttribute('transform');
-            env = 0;
-          }
-        } catch (e) {
-          toast.textContent = "Audio could not be started (check sound.mp3).";
-          console.error(e);
-        }
-      });
-    </script>
-    <!-- coherosphere WebGL background (Three.js) -->
-    <script type="module">
-      import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-      const CONFIG = {
-        particleCount: 2600,
-        sphereRadius: 5.5,
-        baseSpeed: 0.06,
-        waveAmp: 0.18,
-        waveFreq: 0.9,
-        glowStrength: 0.25,
-        colorHumanity: getCssVar('--color-humanity'),
-        colorTechnology: getCssVar('--color-technology'),
-        colorValues: getCssVar('--color-values'),
-        colorNeutral: getCssVar('--neutral'),
-        bgTone: getCssVar('--bg1'),
-        dprMax: 1.6,
-      };
-
-      function getCssVar(name) {
-        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      }
-      const canvas = document.getElementById('bg');
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
-        alpha: true,
-        powerPreference: 'high-performance'
-      });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CONFIG.dprMax));
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-      camera.position.set(0, 0, 8);
-      const hemi = new THREE.HemisphereLight(0xffffff, 0xfafcff, 0.95);
-      scene.add(hemi);
-      const dir = new THREE.DirectionalLight(0xffffff, 0.35);
-      dir.position.set(2, 3, 2);
-      scene.add(dir);
-      scene.fog = new THREE.Fog(CONFIG.bgTone, 16, 28);
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(CONFIG.particleCount * 3);
-      const colors = new Float32Array(CONFIG.particleCount * 3);
-      const sizes = new Float32Array(CONFIG.particleCount);
-      const colHumanity = new THREE.Color(CONFIG.colorHumanity);
-      const colTechnology = new THREE.Color(CONFIG.colorTechnology);
-      const colValues = new THREE.Color(CONFIG.colorValues);
-      const colNeutral = new THREE.Color(CONFIG.colorNeutral);
-      for (let i = 0; i < CONFIG.particleCount; i++) {
-        const u = Math.random();
-        const v = Math.random();
-        const theta = 2 * Math.PI * u;
-        const phi = Math.acos(2 * v - 1);
-        const r = CONFIG.sphereRadius * (0.8 + Math.random() * 0.4);
-        const x = r * Math.sin(phi) * Math.cos(theta);
-        const y = r * Math.cos(phi);
-        const z = r * Math.sin(phi) * Math.sin(theta);
-        positions[i * 3 + 0] = x;
-        positions[i * 3 + 1] = y;
-        positions[i * 3 + 2] = z;
-        const t = Math.random();
-        let c;
-        if (t < 0.08) {
-          c = colHumanity.clone().lerp(colNeutral, 0.6);
-        } else if (t < 0.16) {
-          c = colTechnology.clone().lerp(colNeutral, 0.6);
-        } else if (t < 0.24) {
-          c = colValues.clone().lerp(colNeutral, 0.6);
-        } else {
-          c = colNeutral;
-        }
-        colors[i * 3 + 0] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
-        sizes[i] = 0.7 + Math.random() * 1.0;
-      }
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
-      geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-      const material = new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        uniforms: {
-          time: {
-            value: 0
-          },
-          glow: {
-            value: CONFIG.glowStrength
-          }
-        },
-        vertexShader: /* glsl */ `
-        uniform float time; attribute float size; attribute vec3 customColor; varying vec3 vColor; varying float vAlpha;
-        void main(){
-          vColor = customColor;
-          vec3 p = position;
-          float d = length(p);
-          float n = sin((d*1.4) + time*0.9);
-          float amp = 0.18;
-          p += normalize(p) * n * amp;
-
-          p.x += sin(time*0.15 + position.y*0.12)*0.012;
-          p.y += cos(time*0.16 + position.z*0.14)*0.012;
-
-          vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = size * ( 85.0 / -mvPosition.z );
-          vAlpha = 0.3 + 0.2*sin(time*0.5 + position.x*0.08);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-        fragmentShader: /* glsl */ `
-        uniform float glow; varying vec3 vColor; varying float vAlpha;
-        void main(){
-          float d = length(gl_PointCoord - vec2(0.5));
-          float a = smoothstep(0.65, 0.0, d);
-          float halo = smoothstep(0.8, 0.0, d) * glow * 0.5;
-          vec3 col = vColor * (1.0 + halo);
-          gl_FragColor = vec4(col, a * vAlpha);
-        }
-      `
-      });
-      const points = new THREE.Points(geometry, material);
-      scene.add(points);
-
-      function onResize() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        renderer.setSize(w, h, false);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-      }
-      window.addEventListener('resize', onResize, {
-        passive: true
-      });
-      onResize();
-
-      function animate() {
-        material.uniforms.time.value += 0.016;
-        points.rotation.y += CONFIG.baseSpeed * 0.004;
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-      }
-      animate();
-     
-
+<script>
 (async () => {
   try {
     const res = await fetch('changelog.txt', { cache: 'no-cache' });
     const txt = await res.text();
     const list = document.getElementById('changes');
-    list.innerHTML = txt
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(line => {
-        const [datePart, ...rest] = line.split('|');
-        const date = (datePart || '').trim();
-        const msg = (rest.join('|') || '').trim();
-        return `<li><time datetime="${date.replace(/\./g,'-')}">${date}</time> – ${msg}</li>`;
-      })
-      .join('');
-  } catch(e) {
+    list.innerHTML = '';
+
+    txt.split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
+      // Felder: date|msg|[linkText]|[linkUrl]
+      const parts = line.split('|').map(s => s.trim());
+      const date = parts[0] || '';
+      const msg  = parts[1] || '';
+      const linkText = parts[2] || '';
+      const linkUrl  = parts[3] || '';
+
+      const li = document.createElement('li');
+
+      const time = document.createElement('time');
+      time.dateTime = date.replace(/\./g,'-');
+      time.textContent = date;
+      li.appendChild(time);
+      li.append(' ' + msg);
+
+      if (linkText && linkUrl && /^https?:\/\//i.test(linkUrl)) {
+        li.appendChild(document.createTextNode(', '));
+        const a = document.createElement('a');
+        a.href = linkUrl; a.textContent = linkText;
+        a.target = '_blank'; a.rel = 'noopener noreferrer';
+        li.appendChild(a);
+      }
+      list.appendChild(li);
+    });
+  } catch (e) {
     console.error('Changelog can not be loaded', e);
-    document.getElementById('changes').innerHTML =
-      '<li>Changelog not available</li>';
+    document.getElementById('changes').textContent = 'Changelog not available';
   }
 })();
 </script>
 
-  </body>
+
+       
+       
+         </body>
 </html>
