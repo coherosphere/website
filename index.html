@@ -68,25 +68,25 @@
         flex: 0 0 auto;
         display: grid;
         place-items: center;
-        padding: 24px;
-        gap: 24px;
-      }
+        gap: 4px;
+        padding-block: clamp(8px, 0.2vw, 20px);
+        padding-top: clamp(4px, .6vw, 12px);
+       }
 
       footer.controls {
         margin-top: auto;
         display: flex;
-        gap: 16px;
-        padding: 16px 24px;
+        gap: 10px;
+        padding: 12px 18px;
         border-top: 1px solid #eee;
-        background: #fafafa;
+        background: rgba(255, 255, 255, 0.3);
         align-items: center;
         justify-content: center;
       }
 
       svg {
-        width: min(92vw, 2100px);
+        width: min(92vw, 1200px);
         height: auto;
-        max-height: calc(100dvh - 160px);
         display: block;
       }
 
@@ -122,21 +122,25 @@
         font-size: 20px;
         padding: 0 16px 8px;
         font-family: 'Nunito Sans', Arial, sans-serif;
+        margin-top: 0px;
+        margin-bottom: 0px;
+        padding: 0 16px;
       }
 
       /* Background Canvas */
-      #bg {
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        filter: brightness(118%) saturate(80%) contrast(90%);
-        pointer-events: none;
-      }
+#bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;             
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  pointer-events: none;
+}
+.wrap { position: relative; z-index: 1; } /* Content über Canvas */
       @media (prefers-reduced-motion: reduce) {
-        #bg { display: none; }
+        #bg {
+  z-index: 0; display: none; }
       }
 
       /* Changelog */
@@ -160,6 +164,73 @@
 
       /* Visually hidden helper */
       .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); white-space: nowrap; border: 0; }
+      /* Screenreader-Only */
+.visually-hidden {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap; border: 0; padding: 0; margin: -1px;
+}
+
+/* Modal-Base layout */
+
+
+/* BG-Overlay */
+
+
+/* Close-Button top right */
+
+#btc-modal .modal-close:hover { background: rgba(0,0,0,.12); }
+
+/* Iframe modal */
+
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  
+  z-index: 9999;
+}
+.modal.open { display: flex; justify-content: center; align-items: center; }
+
+.modal-content {
+  width: min(92vw, 900px);
+  height: min(92vh, 760px);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.modal-content iframe { width: 100%; height: 100%; border: none; }
+.modal-close {
+  position: absolute; top: 5px; right: 6px;
+  background: rgba(0,0,0,.06);
+  border: none; border-radius: 8px;
+  font-size: 26px; cursor: pointer;
+}
+
+#btc-modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  justify-content: center;
+  align-items: center;
+}
+#btc-modal.open {
+  display: flex;
+}
+#btc-modal iframe {
+  width: 97%;
+  height: 98%;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+}
+
+
     </style>
   </head>
   <body>
@@ -239,14 +310,15 @@
          <footer class="controls">
             <audio id="audio" src="manifesto.mp3" preload="auto" playsinline></audio>
             <button id="play" class="btn" aria-pressed="false">▶ manifesto</button>
-            <a href="https://ord.link/106004490" target="_blank" class="btn">&#8383; on chain</a>
+            <a href="https://ord.link/106004490" target="_blank" class="btn">&#8383;</a>
             <a href="https://nostr.band/npub1kc9weag9hjf0p0xz5naamts48rdkzymucvrd9ws8ns7n4x3qq5gsljlnck" target="_blank" class="btn">nostr</a>
+            <a href="donate.html" class="btn" id="donate-link">donate</a>
          </footer>
         <p id="toast" class="sr-only" aria-live="polite"></p>
   </div>
 
       <script>
-       <!-- coherosphere manifesto play -->    
+           
          const group = document.getElementById('coreGroup');
          const audio = document.getElementById('audio');
          const btnPlay = document.getElementById('play');
@@ -338,7 +410,7 @@
       </script>
         
 <script>
- <!-- coherosphere changelog -->  
+   
 	(async () => {
   	try {
     const res = await fetch('changelog.txt', { cache: 'no-store' });
@@ -379,7 +451,7 @@
 </script>
 
       <script type="module">
-        <!-- coherosphere WebGL background (Three.js) -->
+        
          import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
          const CONFIG = {
            particleCount: 2600,
@@ -520,6 +592,54 @@
          animate();
          
          </script>
+
+
+<div id="btc-modal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close">&times;</button>
+<iframe
+  src="about:blank"
+  title="Donate – Bitcoin Treasury"
+  loading="lazy"
+  referrerpolicy="no-referrer"
+  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+></iframe>
+  </div>
+</div>
+
+<script>
+  const donateLink = document.getElementById('donate-link');
+  const modal = document.getElementById('btc-modal');
+  const closeBtn = modal.querySelector('.modal-close');
+  const iframe = modal.querySelector('iframe');
+
+  function openModal(e) {
+    e?.preventDefault();
+    // Cache-Busting: unique Query-Param pro Klick
+    const ts = Date.now();
+    const base = '/donate.html';
+    const sep = base.includes('?') ? '&' : '?';
+    iframe.src = base + sep + 'ts=' + ts;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    // Speicher freigeben & sicherstellen, dass beim nächsten Öffnen neu geladen wird
+    iframe.src = 'about:blank';
+  }
+
+  donateLink.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  // Optional: per URL-Hash direkt öffnen (z.B. /#donate)
+  if (location.hash === '#donate') openModal();
+</script>
+
+
 
 </body>
 </html>
