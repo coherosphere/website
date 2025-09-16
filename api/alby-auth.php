@@ -1,14 +1,18 @@
 <?php
-require_once __DIR__ . '/../../phptmp/config.php';
-$auth_url = 'https://getalby.com/oauth';
+// /api/alby-auth.php
+require_once __DIR__ . '/_lib.php'; // lädt ../../phptmp/config.php
+session_start();
+
+$authUrl = 'https://getalby.com/oauth';
 $params = [
-  'client_id' => ALBY_CLIENT_ID,
   'response_type' => 'code',
-  'redirect_uri' => ALBY_REDIRECT_URI,
-  'scope' => ALBY_SCOPES,
-  'state' => bin2hex(random_bytes(8))
+  'client_id'     => ALBY_CLIENT_ID,
+  'redirect_uri'  => ALBY_REDIRECT_URI,      // muss exakt mit der in Alby hinterlegten URL matchen
+  'scope'         => ALBY_SCOPES,            // z.B. "account:read balance:read invoices:read transactions:read"
+  'state'         => bin2hex(random_bytes(16)) // CSRF-Schutz
 ];
-file_put_contents(__DIR__ . '/alby_oauth_state', $params['state']);
-$qs = http_build_query($params);
-header('Location: ' . $auth_url . '?' . $qs);
+$_SESSION['alby_oauth_state'] = $params['state'];
+
+header('Cache-Control: no-store');
+header('Location: ' . $authUrl . '?' . http_build_query($params));
 exit;

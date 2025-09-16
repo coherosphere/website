@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>coherosphere – transactions</title>
+  
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Nunito Sans from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body{font-family: 'Nunito Sans', Arial, sans-serif;max-width:1000px;margin:24px auto;padding:0 16px}
+    .muted{color:#6b7280}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input[type="search"],select,button{padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+    button{cursor:pointer} button.primary{background:#111;color:#fff}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:14px}
+    .right{text-align:right}
+    .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+    .chip.onchain{background:#eef2ff;color:#3730a3}
+    .chip.lightning{background:#ecfdf5;color:#065f46}
+    .dir.in{background:#e8f5e9;color:#1b5e20}
+    .dir.out{background:#ffebee;color:#b71c1c}
+    .dir.self{background:#f3e8ff;color:#6b21a8}
+    .ok{color:#166534}.bad{color:#991b1b}
+
+    /* Loader-Kreisel */
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #111;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      animation: spin 1s linear infinite;
+      margin: 12px auto;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg);} }
+  </style>
+</head>
+<body>
+  <h1>Bitcoin Transactions - Treasury</h1>
+  <p class="muted">List of all on-chain and Lightning transactions.</p>
+
+  <div class="row">
+    <input id="q" type="search" placeholder="Filter (onchain, lightning, in, out, self, settled, confirmed, open, pending, txid…)" />
+    <select id="source"><option value="all" selected>all sources</option><option value="onchain">only On-Chain</option><option value="lightning">only Lightning</option></select>
+    <select id="limit"><option>50</option><option selected>100</option><option>150</option><option>200</option></select>
+    <button id="reload">Refresh</button>
+    <button id="csv" class="primary">CSV export</button>
+    <span id="meta" class="muted"></span>
+  </div>
+
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Source</th>
+        <th>Direction</th>
+        <th>Status</th>
+        <th class="right">Sats</th>
+        <th class="right">Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="8" style="text-align:center"><div class="loader"></div></td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    let lastItems = [];
+
+    async function getFeed(params){
+      const url = new URL('/api/txfeed.php', window.location.origin);
+      for (const [k,v] of Object.entries(params)) url.searchParams.set(k,v);
+      const r = await fetch(url.toString(), {cache:'no-store'});
+      const t = await r.text();
+      try { return JSON.parse(t); } catch(e){ throw new Error('Ungültige JSON-Antwort: '+t.slice(0,200)); }
+    }
+
+    function fmtTs(ts){ if(!ts) return ''; const d=new Date(ts*1000); return d.toLocaleString(); }
+    function fmtSats(n, dir){
+      if (n==null) return '';
+      const s = Number(n).toLocaleString();
+      return (dir==='out' ? '−' : (dir==='in' ? '+' : '')) + s;
+    }
+    function signedAmount(it){
+      if (it.amount == null) return 0;
+      if (it.direction === 'out') return -Number(it.amount);
+      if (it.direction === 'in')  return +Number(it.amount);
+      return 0;
+    }
+    function keyFor(it){
+      return `${it.ts||0}|${it.id||''}|${it.source||''}|${it.direction||''}|${it.status||''}`;
+    }
+
+    function render(items){
+      lastItems = items.slice(0);
+      const q = document.getElementById('q').value.trim().toLowerCase();
+      const tb = document.querySelector('#tbl tbody');
+      tb.innerHTML = '';
+
+      let filtered = items;
+      if (q){
+        filtered = items.filter(it => {
+          const hay = [
+            it.source, it.status, it.direction, it.id,
+            (it.meta?.desc||''), JSON.stringify(it.meta||{})
+          ].join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+      }
+
+      // running balance
+      const asc = filtered.slice().sort((a,b) => (a.ts||0) - (b.ts||0));
+      let run = 0;
+      const balanceByKey = new Map();
+      for (const it of asc){
+        run += signedAmount(it);
+        balanceByKey.set(keyFor(it), run);
+      }
+
+      for (const it of filtered){
+        const bal = balanceByKey.get(keyFor(it));
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${fmtTs(it.ts)}</td>
+          <td><span class="chip ${it.source}">${it.source}</span></td>
+          <td><span class="chip dir ${it.direction||'self'}">${it.direction||'self'}</span></td>
+          <td>${it.status ? `<span class="${(it.status==='confirmed'||it.status==='settled')?'ok':'bad'}">${it.status}</span>`:''}</td>
+          <td class="right">${fmtSats(it.amount, it.direction)}</td>
+          <td class="right">${bal==null?'':Number(bal).toLocaleString()}</td>
+        `;
+        tb.appendChild(tr);
+      }
+      document.getElementById('meta').textContent = `${filtered.length} Records`;
+    }
+
+    async function load(){
+      const tb = document.querySelector('#tbl tbody');
+      tb.innerHTML = `<tr><td colspan="8" style="text-align:center"><div class="loader"></div></td></tr>`;
+      try {
+        const params = {
+          limit: document.getElementById('limit').value,
+          source: document.getElementById('source').value,
+          format: 'json'
+        };
+        const data = await getFeed(params);
+        if (!data.ok) throw new Error('Feed-Fehler');
+        render(data.items||[]);
+      } catch(err) {
+        tb.innerHTML = `<tr><td colspan="8" class="bad">${String(err)}</td></tr>`;
+      }
+    }
+
+    document.getElementById('reload').addEventListener('click', load);
+    document.getElementById('csv').addEventListener('click', () => {
+      const url = new URL('/api/txfeed.php', window.location.origin);
+      url.searchParams.set('format','csv');
+      url.searchParams.set('limit', document.getElementById('limit').value);
+      url.searchParams.set('source', document.getElementById('source').value);
+      window.location.href = url.toString();
+    });
+    document.getElementById('q').addEventListener('input', () => render(lastItems));
+
+    load();
+  </script>
+</body>
+</html>

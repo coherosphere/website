@@ -1,4 +1,5 @@
-2025-09-15|Transparent Donation
+2025-09-16|make |treasury transactions public|https://coherosphere.com/transactions.html
+2025-09-15|transparent |donation option|https://coherosphere.com/donate.html
 2025-09-13|914508|Onchain Manifesto|https://ord.link/106004490
 2025-09-13|Launch website|GitHub repository|https://github.com/coherosphere
 2025-09-10|914047 Domain registration

@@ -1,51 +1,67 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-  http_response_code(200);
-  exit;
-}
+declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/_lib.php';
+header('Cache-Control: no-store');
 
-$CACHE = __DIR__ . '/cache_lightning.json';
-$TTL = 20;
-$TOKEN_FILE = __DIR__ . '/alby_token.json';
+require_once __DIR__ . '/../../phptmp/config.php';
+
+function http_get_json_auth(string $url, string $token): array {
+  $ch = curl_init($url);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 6,
+    CURLOPT_TIMEOUT => 10,
+    CURLOPT_HTTPHEADER => [
+      'Authorization: Bearer ' . $token,
+      'Accept: application/json'
+    ],
+    CURLOPT_USERAGENT => 'coherosphere-lightning/1.0'
+  ]);
+  $res = curl_exec($ch);
+  if ($res === false) throw new Exception('cURL error: '.curl_error($ch));
+  $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+  if ($code < 200 || $code >= 300) throw new Exception("HTTP $code for $url");
+  $json = json_decode($res, true);
+  if (!is_array($json)) throw new Exception('Invalid JSON');
+  return $json;
+}
+
+$payload = [
+  'ok' => true,
+  'receiving' => defined('LIGHTNING_ADDRESS') ? LIGHTNING_ADDRESS : null,
+  'balance_sats' => null,
+  '_meta' => [
+    'updated_at' => gmdate('c'),
+    'source' => null
+  ]
+];
 
 try {
-  $cached = cache_try_get($CACHE, $TTL);
-  if ($cached) { echo json_encode($cached); exit; }
-
-  $ln_address = defined('LIGHTNING_ADDRESS') ? LIGHTNING_ADDRESS : '';
-  $balance = 0;
-
-  $tok = get_alby_token($TOKEN_FILE);
-  if ($tok && isset($tok['access_token'])) {
-    if (isset($tok['expires_at']) && time() > $tok['expires_at'] - 30) {
-      $tok = refresh_alby_token($TOKEN_FILE) ?: $tok;
+  if (defined('ALBY_ACCESS_TOKEN') && ALBY_ACCESS_TOKEN) {
+    $data = http_get_json_auth('https://api.getalby.com/user/wallet', ALBY_ACCESS_TOKEN);
+    $sats = null;
+    if (isset($data['balance']) && is_numeric($data['balance'])) {
+      $bal = (float)$data['balance'];
+      $sats = ($bal > 9e12) ? (int)round($bal/1000) : (int)$bal; // msats vs sats
+    } elseif (isset($data['satoshi_balance'])) {
+      $sats = (int)$data['satoshi_balance'];
     }
-    $auth = ['Authorization: Bearer ' . $tok['access_token']];
-
-    // Balance
-    $bal = http_get_json('https://api.getalby.com/balance', $auth);
-    $balance = intval($bal['balance'] ?? 0);
-
-    // Try fetch lightning address
-    try {
-      $v4v = http_get_json('https://api.getalby.com/user/value4value', $auth);
-      if (!empty($v4v['lightning_address'])) $ln_address = $v4v['lightning_address'];
-    } catch (Exception $e) { /* ignore */ }
+    if ($sats !== null) $payload['balance_sats'] = $sats;
+    $payload['_meta']['source'] = 'alby_api';
+  } else {
+    $payload['_meta']['source'] = 'no_token_fallback';
   }
-
-  $payload = [
-    'balance_sats' => $balance,
-    'receiving' => $ln_address,
-    '_meta' => ['updated_at' => gmdate('c')]
-  ];
-  cache_put($CACHE, $payload);
-  echo json_encode($payload);
-} catch (Exception $e) {
-  http_response_code(500);
-  echo json_encode(['error'=>'lightning_failed','detail'=>$e->getMessage()]);
+  echo json_encode($payload, JSON_UNESCAPED_SLASHES);
+} catch (Throwable $e) {
+  http_response_code(502);
+  echo json_encode([
+    'ok' => false,
+    'receiving' => $payload['receiving'],
+    'error' => 'lightning_unavailable',
+    'message' => $e->getMessage(),
+    '_meta' => [
+      'updated_at' => gmdate('c')
+    ]
+  ], JSON_UNESCAPED_SLASHES);
 }
