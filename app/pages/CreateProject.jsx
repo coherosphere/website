@@ -12,6 +12,7 @@ import ProjectFormBasics from '@/components/projects/ProjectFormBasics';
 import ProjectFormDetails from '@/components/projects/ProjectFormDetails';
 import ProjectFormReview from '@/components/projects/ProjectFormReview';
 import ProjectPreview from '@/components/projects/ProjectPreview';
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: FileText },
@@ -149,13 +150,24 @@ export default function CreateProject() {
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center">
-        <motion.div
-          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+                 <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
     );
   }
   

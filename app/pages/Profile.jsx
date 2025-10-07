@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Hub, Project } from '@/api/entities';
+import { User, Hub, Project, Resource, Event, LearningCircle } from '@/api/entities';
 import { motion } from 'framer-motion';
-import { UserCircle, Copy, QrCode, MapPin, Heart, Zap, Save, AlertTriangle } from 'lucide-react';
+import { UserCircle, Copy, QrCode, MapPin, Heart, Zap, Save, AlertTriangle, BookOpen, Calendar, Users, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -13,6 +13,8 @@ import HubSelector from '@/components/profile/HubSelector';
 import SupportedProjects from '@/components/profile/SupportedProjects';
 import ValuesEditor from '@/components/profile/ValuesEditor';
 import SkillsEditor from '@/components/profile/SkillsEditor';
+import StatCard from '@/components/StatCard';
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -22,6 +24,15 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
   const [error, setError] = useState(null);
+
+  // User statistics
+  const [stats, setStats] = useState({
+    sharedKnowledge: 0,
+    hostedEvents: 0,
+    startedCircles: 0,
+    supportedProjects: 0,
+    startedProjects: 0,
+  });
 
   // Form state
   const [selectedHubId, setSelectedHubId] = useState('');
@@ -42,17 +53,15 @@ export default function Profile() {
       setUser(userData);
       
       // Initialize form state
-      setSelectedHubId(userData.hub_id || ''); // Changed from userData.location to userData.hub_id
+      setSelectedHubId(userData.hub_id || '');
       setValues(userData.values || ['Resilience', 'Innovation', 'Community']);
       setSkills(userData.skills || ['Web Development', 'Community Building']);
 
       // Load hubs
-      await new Promise(resolve => setTimeout(resolve, 200));
       const hubData = await Hub.list();
       setHubs(hubData);
 
-      // FIX: Load ALL projects and filter for the ones the user actually supports
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Load ALL projects and filter for the ones the user actually supports
       const allProjects = await Project.list();
       
       const userSupportedProjects = allProjects.filter(project => 
@@ -61,6 +70,27 @@ export default function Profile() {
 
       console.log(`User ${userData.id} supports ${userSupportedProjects.length} projects.`);
       setSupportedProjects(userSupportedProjects);
+
+      // Calculate user statistics
+      const [resources, events, circles, projects] = await Promise.all([
+        Resource.list().catch(() => []),
+        Event.list().catch(() => []),
+        LearningCircle.list().catch(() => []),
+        Project.list().catch(() => [])
+      ]);
+
+      const userCreatedResources = resources.filter(r => r.creator_id === userData.id || r.created_by === userData.email);
+      const userHostedEvents = events.filter(e => e.organizer_id === userData.id);
+      const userStartedCircles = circles.filter(c => c.participants && c.participants.length > 0 && c.participants[0] === userData.id); // Assuming first participant is creator
+      const userStartedProjects = projects.filter(p => p.creator_id === userData.id);
+
+      setStats({
+        sharedKnowledge: userCreatedResources.length,
+        hostedEvents: userHostedEvents.length,
+        startedCircles: userStartedCircles.length,
+        supportedProjects: userSupportedProjects.length,
+        startedProjects: userStartedProjects.length,
+      });
 
     } catch (err) {
       console.error('Error loading profile data:', err);
@@ -79,10 +109,10 @@ export default function Profile() {
     try {
       // Update user profile with new values and skills
       await User.updateMyUserData({
-        hub_id: selectedHubId, // Changed from location to hub_id
+        hub_id: selectedHubId,
         values: values,
         skills: skills,
-        resonance_score: (user.resonance_score || 0) + 1 // Small boost for engagement
+        resonance_score: (user.resonance_score || 0) + 1
       });
 
       setSaveMessage('Profile updated successfully!');
@@ -106,13 +136,24 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <motion.div
-          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+               <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
     );
   }
 
@@ -152,6 +193,50 @@ export default function Profile() {
           Your resonance identity – hubs, projects, values, and skills.
         </p>
       </div>
+
+      {/* Stats Bar */}
+      <motion.div
+        className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.1 }}
+      >
+        <StatCard
+          icon={BookOpen}
+          value={stats.sharedKnowledge}
+          label="Shared Knowledge"
+          color="text-green-500"
+          isLoading={false}
+        />
+        <StatCard
+          icon={Calendar}
+          value={stats.hostedEvents}
+          label="Hosted Events"
+          color="text-blue-500"
+          isLoading={false}
+        />
+        <StatCard
+          icon={Users}
+          value={stats.startedCircles}
+          label="Started Circles"
+          color="text-purple-500"
+          isLoading={false}
+        />
+        <StatCard
+          icon={Heart}
+          value={stats.supportedProjects}
+          label="Supported Projects"
+          color="text-red-400"
+          isLoading={false}
+        />
+        <StatCard
+          icon={Lightbulb}
+          value={stats.startedProjects}
+          label="Started Projects"
+          color="text-orange-500"
+          isLoading={false}
+        />
+      </motion.div>
 
       {/* Save Message */}
       {saveMessage && (

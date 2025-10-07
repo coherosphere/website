@@ -13,6 +13,7 @@ import EventFormTimePlace from '@/components/events/EventFormTimePlace';
 import EventFormResonance from '@/components/events/EventFormResonance';
 import EventFormReview from '@/components/events/EventFormReview';
 import EventPreview from '@/components/events/EventPreview';
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: Calendar },
@@ -51,10 +52,12 @@ export default function HostEvent() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEventId, setEditEventId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
   // Removed: const [isSavingDraft, setIsSavingDraft] = useState(false); 
 
   useEffect(() => {
     const loadUserAndData = async () => {
+      setIsLoading(true); // Set loading to true at the start
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -97,6 +100,8 @@ export default function HostEvent() {
         }
       } catch (error) {
         console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false); // Set loading to false when done
       }
     };
 
@@ -198,6 +203,29 @@ export default function HostEvent() {
         return null;
     }
   };
+
+  if (isLoading) {
+    return (
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
+    );
+  }
 
   if (isSuccess) {
     return (

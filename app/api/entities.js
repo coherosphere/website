@@ -23,6 +23,16 @@ export const DailyCheckIn = base44.entities.DailyCheckIn;
 
 export const faq = base44.entities.faq;
 
+export const Knowledge = base44.entities.Knowledge;
+
+export const ChatLog = base44.entities.ChatLog;
+
+export const Conversation = base44.entities.Conversation;
+
+export const NostrMessage = base44.entities.NostrMessage;
+
+export const RelayEndpoint = base44.entities.RelayEndpoint;
+
 
 
 // auth sdk:

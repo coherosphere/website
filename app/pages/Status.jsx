@@ -182,15 +182,32 @@ const TransactionCard = ({ title, transactions, type, icon: Icon, address, error
   };
 
   const formatDate = (timestamp) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }) + ', ' + date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!timestamp) {
+      return 'not confirmed';
+    }
+    try {
+      let date;
+      if (typeof timestamp === 'number') {
+        date = timestamp > 1000000000000 ? new Date(timestamp) : new Date(timestamp * 1000);
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      } else {
+        return 'not confirmed';
+      }
+
+      if (isNaN(date.getTime())) return 'not confirmed';
+
+      return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }) + ', ' + date.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'not confirmed';
+    }
   };
 
   // The getBitcoinTxAmount function is no longer needed here,
@@ -218,15 +235,11 @@ const TransactionCard = ({ title, transactions, type, icon: Icon, address, error
           return (
             <div key={tx.id || tx.txid || index} className="flex items-center justify-between py-2 px-3 bg-slate-700/30 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    direction === 'in' ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'
-                  }`}>
-                    {direction === 'in' ? (
-                      <ArrowDownCircle className="w-3 h-3 text-green-400" />
-                    ) : (
-                      <ArrowUpCircle className="w-3 h-3 text-red-400" />
-                    )}
-                  </div>
+                  {direction === 'in' ? (
+                    <ArrowDownCircle className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <ArrowUpCircle className="w-4 h-4 text-red-400" />
+                  )}
                   <div>
                     <div className="text-white text-sm font-medium">
                       {direction === 'in' ? 'Received' : 'Sent'}

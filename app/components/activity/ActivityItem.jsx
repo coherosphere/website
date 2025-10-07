@@ -1,20 +1,21 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MessageCircle, 
-  AtSign, 
-  Reply, 
-  Zap, 
+import {
+  MessageCircle,
+  AtSign,
+  Reply,
+  Zap,
   ArrowRight,
   Heart,
   Repeat,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-// import { nip19 } from 'nostr-tools'; // This import is removed
+import { format } from 'date-fns';
 
 export default function ActivityItem({ activity, index }) {
   const getActivityIcon = (type) => {
@@ -58,34 +59,71 @@ export default function ActivityItem({ activity, index }) {
     return `${days}d`;
   };
 
+  const formatFullDate = (timestamp) => {
+    try {
+      const date = new Date(timestamp);
+      // Format: DD Month YYYY HH:MM
+      return format(date, 'dd MMMM yyyy HH:mm');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   const truncateNpub = (npub) => {
     if (!npub) return '';
     return `${npub.substring(0, 10)}...${npub.substring(npub.length - 4)}`;
   }
-  
+
   const getEventNpub = () => {
-    // Use the pre-encoded nevent from the backend
     return activity?.nevent || '';
   }
+
+  const renderSenderRecipient = () => {
+    const fromName = activity.from_name || truncateNpub(activity.from_npub);
+    const toName = activity.to_name;
+    const toNpub = activity.to_npub;
+    
+    // If we don't have recipient info at all, just show sender
+    if (!toName && !toNpub) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <span>by</span>
+          <span className="font-mono text-xs text-orange-400">{fromName}</span>
+        </div>
+      );
+    }
+    
+    // Show sender > recipient (with name or fallback to npub)
+    const recipientDisplay = toName || truncateNpub(toNpub);
+    
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-400">
+        <span className="font-mono text-xs text-orange-400">{fromName}</span>
+        <span>→</span>
+        <span className="font-mono text-xs text-purple-400">{recipientDisplay}</span>
+      </div>
+    );
+  };
 
   const renderContent = () => {
     let content = activity.content || "No content";
     const emojiMatch = content.match(/^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])$/);
-    
+
     if (activity.type === 'reaction' && emojiMatch) {
       return <div className="text-4xl">{content}</div>;
     }
-    
+
     if (activity.type === 'reaction' && content === '+') {
       return <div className="flex items-center text-slate-400"><Heart className="w-4 h-4 mr-2 text-pink-500"/> Liked a post</div>
     }
-    
+
     if (!activity.content) {
       if(activity.type === 'reaction') return <div className="flex items-center text-slate-400"><Heart className="w-4 h-4 mr-2 text-pink-500"/> Reacted to a post</div>
       if(activity.type === 'repost') return <div className="flex items-center text-slate-400"><Repeat className="w-4 h-4 mr-2 text-teal-500"/> Reposted</div>
       return <p className="text-slate-500 italic">No content</p>;
     }
-    
+
     return <p className="text-slate-300 leading-relaxed break-words">{content}</p>;
   }
 
@@ -104,11 +142,8 @@ export default function ActivityItem({ activity, index }) {
                 {getActivityIcon(activity.type)}
                 <span className="ml-1 capitalize">{activity.type.replace('-', ' ')}</span>
               </Badge>
-              
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <span>by</span>
-                <span className="font-mono text-xs text-orange-400">{truncateNpub(activity.from_npub)}</span>
-              </div>
+
+              {renderSenderRecipient()}
             </div>
 
             <div className="text-slate-500 text-sm whitespace-nowrap pl-2">
@@ -133,8 +168,9 @@ export default function ActivityItem({ activity, index }) {
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-700">
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              {/* This could be extended to show real stats in the future */}
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Calendar className="w-4 h-4" />
+              <span>{formatFullDate(activity.timestamp)}</span>
             </div>
 
             <Button

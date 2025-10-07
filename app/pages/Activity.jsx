@@ -11,6 +11,7 @@ import { checkNostrActivity } from "@/api/functions";
 import ActivityItem from "@/components/activity/ActivityItem";
 import ActivityFilters from "@/components/activity/ActivityFilters";
 import ActivityStats from "@/components/activity/ActivityStats"; // Added import
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const NOSTR_CACHE_KEY = 'coherosphere_nostr_status';
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -228,13 +229,24 @@ export default function Activity() {
         transition={{ duration: 0.8, delay: 0.4 }}
       >
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <motion.div
-              className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
-          </div>
+          <>
+            {/* Fixed Overlay Spinner */}
+            <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+              <div className="text-center">
+                <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+                <div className="text-slate-400 text-lg mt-4">Loading...</div>
+              </div>
+            </div>
+            
+            {/* Virtual placeholder */}
+            <div className="min-h-[calc(100vh-500px)]" aria-hidden="true"></div>
+          </>
         ) : paginatedActivities.length === 0 ? (
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-12 text-center">

@@ -1,10 +1,11 @@
-import { Users, Droplets, BrainCircuit, Wind, HeartPulse } from 'lucide-react';
+
+import { Users, Droplets, BrainCircuit, Leaf, HeartPulse } from 'lucide-react';
 
 // Mapping from icon names (string) to the actual icon components
 export const iconMap = {
   Users,
   Droplets,
   BrainCircuit,
-  Wind,
+  Leaf, // Re-added Leaf icon
   HeartPulse,
 };

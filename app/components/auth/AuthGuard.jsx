@@ -1,38 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { User } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Globe, LogIn, Loader2 } from 'lucide-react';
+import { Globe, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useUser, UserProvider } from './UserContext';
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
-export default function AuthGuard({ children }) {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.log('User not authenticated:', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+function AuthGuardContent({ children }) {
+  const { currentUser, isLoading, isAuthenticated, isInitialized } = useUser();
 
   const handleLogin = () => {
     const currentUrl = window.location.href;
     User.loginWithRedirect(currentUrl);
   };
 
-  if (isLoading) {
+  // Spinner nur anzeigen, wenn noch nicht initialisiert oder während eines expliziten Refreshs
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <motion.div
@@ -40,9 +24,13 @@ export default function AuthGuard({ children }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
-          </div>
+          <CoherosphereNetworkSpinner 
+            size={100}
+            lineWidth={2}
+            dotRadius={6}
+            interval={1100}
+            maxConcurrent={4}
+          />
           <p className="text-slate-400">Checking authentication...</p>
         </motion.div>
       </div>
@@ -100,4 +88,12 @@ export default function AuthGuard({ children }) {
   }
 
   return children;
+}
+
+export default function AuthGuard({ children }) {
+  return (
+    <UserProvider>
+      <AuthGuardContent>{children}</AuthGuardContent>
+    </UserProvider>
+  );
 }

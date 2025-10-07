@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ const categoryColors = {
   'Community Building': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   'Holistic Health': 'bg-green-500/20 text-green-400 border-green-500/30',
   'Decentralized Tech': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'Nature & Sustainability': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  'Nature & Sustainability': 'bg-emerald-500/30 text-emerald-200 border-emerald-400/40', // Much brighter for visibility
 };
 
 export default function ResourcePreview({ resourceData, creator }) {

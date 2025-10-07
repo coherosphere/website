@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, Eye, EyeOff, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import {
   format, addDays, startOfDay, isSameDay, differenceInDays, subDays, startOfWeek,
   eachWeekOfInterval, getISOWeek, differenceInHours, addHours, isSameHour, addWeeks, subWeeks
 } from 'date-fns';
+
+// NEW import for the spinner
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 // Mock Data Generator - generates for a specific range
 const generateMockEventsForRange = (rangeStart, rangeEnd) => {
@@ -152,12 +155,24 @@ export default function Calendar() {
   const [loadedMinDate, setLoadedMinDate] = useState(() => startOfDay(subWeeks(today, 30)));
   const [loadedMaxDate, setLoadedMaxDate] = useState(() => startOfDay(addWeeks(today, 30)));
   
+  // State for initial full-page loading
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
   // Generate all events once on initialization
-  const [allMockEvents, setAllMockEvents] = useState(() => {
-    const initialMinDate = startOfDay(subWeeks(today, 30));
-    const initialMaxDate = startOfDay(addWeeks(today, 30));
-    return generateMockEventsForRange(initialMinDate, initialMaxDate);
-  });
+  const [allMockEvents, setAllMockEvents] = useState([]); // Initialize as empty array
+  
+  // Populate allMockEvents and set initial loading state
+  useEffect(() => {
+    const fetchInitialEvents = () => {
+      const initialMinDate = startOfDay(subWeeks(today, 30));
+      const initialMaxDate = startOfDay(addWeeks(today, 30));
+      const events = generateMockEventsForRange(initialMinDate, initialMaxDate);
+      setAllMockEvents(events);
+      // Simulate a network delay
+      setTimeout(() => setIsInitialLoading(false), 500); // Set to false after a delay
+    };
+    fetchInitialEvents();
+  }, [today]); // 'today' is stable because it's set with useState(() => new Date())
   
   // UI States
   const [selectedItem, setSelectedItem] = useState(null);
@@ -180,6 +195,7 @@ export default function Calendar() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const timelineViewportRef = useRef(null);
+  const timelineContentRef = useRef(null); // Added ref for the timeline content container
   const todayRef = useRef(null);
 
   // Ref to store the old scroll width before prepending data (loading 'past' data)
@@ -187,7 +203,7 @@ export default function Calendar() {
 
   // Function to load more data in a specific direction
   const loadMoreData = useCallback(async (direction) => {
-    if (isLoadingMore) return; // Prevent multiple simultaneous loads
+    if (isLoadingMore) return;
     
     setIsLoadingMore(true);
     
@@ -239,25 +255,25 @@ export default function Calendar() {
 
   // Check if we need to load more data based on scroll position
   const checkForDataLoading = useCallback(() => {
-    if (!timelineViewportRef.current || isLoadingMore) return;
-    
-    const viewport = timelineViewportRef.current;
-    const { scrollLeft, scrollWidth, clientWidth } = viewport;
-    
-    // Load threshold: when we're within 10% of the visible viewport width to either edge
-    const loadThresholdPixels = 0.1 * clientWidth; 
-    
-    // Load more data if we're close to the edges
-    if (scrollLeft < loadThresholdPixels) {
-      console.log('Near left edge, loading past data...');
-      loadMoreData('past');
-    } else if ((scrollWidth - (scrollLeft + clientWidth)) < loadThresholdPixels) {
-      console.log('Near right edge, loading future data...');
-      loadMoreData('future');
+    if (!isLoadingMore && timelineViewportRef.current) {
+      const viewport = timelineViewportRef.current;
+      const { scrollLeft, scrollWidth, clientWidth } = viewport;
+      
+      // Load threshold: when we're within 10% of the visible viewport width to either edge
+      const loadThresholdPixels = 0.1 * clientWidth; 
+      
+      // Load more data if we're close to the edges
+      if (scrollLeft < loadThresholdPixels) {
+        console.log('Near left edge, loading past data...');
+        loadMoreData('past');
+      } else if ((scrollWidth - (scrollLeft + clientWidth)) < loadThresholdPixels) {
+        console.log('Near right edge, loading future data...');
+        loadMoreData('future');
+      }
     }
   }, [loadMoreData, isLoadingMore]);
 
-  // NEW: Create an effective date range based on the view mode
+  // Create an effective date range based on the view mode
   const effectiveDateRange = useMemo(() => {
     if (viewMode === 'hour') {
       const hourViewWindowDays = 14; // +/- 14 days for hour view
@@ -321,7 +337,7 @@ export default function Calendar() {
     return weeks;
   }, [effectiveDateRange, today, viewMode]);
 
-  // Scroll to today on initial load or viewMode change
+  // MODIFIED: Scroll to today on viewMode change (but not initial load)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!timelineViewportRef.current) {
@@ -331,10 +347,10 @@ export default function Calendar() {
         return;
       }
 
-      const isInitialLoad = !hasInitiallyScrolled;
       const isViewModeChange = previousViewModeRef.current !== null && viewMode !== previousViewModeRef.current;
 
-      if (isInitialLoad || isViewModeChange) {
+      // Only scroll on view mode changes, not initial load
+      if (isViewModeChange) {
         let scrollTargetOffset = 0;
 
         if (viewMode === 'hour') {
@@ -353,25 +369,20 @@ export default function Calendar() {
             }
             scrollTargetOffset = offsetDays * WEEK_DAY_WIDTH;
           } else {
-            // Fallback for cases where today's week might not be perfectly aligned with generated weekData
             scrollTargetOffset = differenceInDays(startOfDay(today), effectiveDateRange.minDate) * WEEK_DAY_WIDTH;
           }
         }
 
         const viewportWidth = timelineViewportRef.current.offsetWidth;
         const scrollLeft = scrollTargetOffset - viewportWidth / 2;
-        timelineViewportRef.current.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
-        
-        if (!hasInitiallyScrolled) {
-          setHasInitiallyScrolled(true);
-        }
+        timelineViewportRef.current.scrollLeft = Math.max(0, scrollLeft);
       }
 
       previousViewModeRef.current = viewMode;
 
     }, 100);
     return () => clearTimeout(timer);
-  }, [viewMode, hasInitiallyScrolled, today, effectiveDateRange, weekData]);
+  }, [viewMode, today, effectiveDateRange, weekData]);
 
   const scrollToToday = useCallback(() => {
     if (timelineViewportRef.current) {
@@ -399,7 +410,7 @@ export default function Calendar() {
 
       const viewportWidth = timelineViewportRef.current.offsetWidth;
       const scrollLeft = scrollTargetOffset - viewportWidth / 2;
-      timelineViewportRef.current.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+      timelineViewportRef.current.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' }); // Smooth scroll for user interaction
     }
   }, [today, effectiveDateRange, viewMode, weekData]);
 
@@ -682,7 +693,7 @@ export default function Calendar() {
     }
   }, [totalDays, viewMode]);
 
-  // NEW: Calculate event counts per time slot for status bar
+  // Calculate event counts per time slot for status bar
   const timeSlotCounts = useMemo(() => {
     const counts = [];
     
@@ -834,7 +845,7 @@ export default function Calendar() {
     // Store text visibility separately for use in rendering
     window._eventTextVisibility = newTextVisibility;
 
-    // NEW: Calculate header and status bar text visibility
+    // Calculate header and status bar text visibility
     const newHeaderVisibility = {};
     const newStatusVisibility = {};
 
@@ -908,20 +919,74 @@ export default function Calendar() {
 
   }, [allMockEvents, allDays, viewMode, effectiveDateRange, laneItems.items, checkForDataLoading, weekData, timeSlotCounts]);
 
-  // Effect for throttling the dynamic style updates
+  // Trigger updateDynamicStyles when items change
   useEffect(() => {
-    updateDynamicStyles(); // Initial call
+    if (timelineViewportRef.current && Object.keys(laneItems.items).length > 0) {
+      // Small delay to ensure DOM has updated
+      const timer = setTimeout(() => {
+        updateDynamicStyles();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [laneItems, updateDynamicStyles]);
 
+  // ResizeObserver to detect when timeline viewport has its final size
+  useEffect(() => {
+    const viewport = timelineViewportRef.current;
+    if (!viewport) return;
+
+    let resizeTimer = null;
+    
+    // Check if ResizeObserver is available in the environment
+    if (typeof ResizeObserver === 'undefined') {
+      console.warn('ResizeObserver is not supported in this environment.');
+      // Still trigger initial update in case it was missed
+      const initialFallbackTimer = setTimeout(() => {
+        updateDynamicStyles();
+      }, 100);
+      return () => clearTimeout(initialFallbackTimer);
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Debounce the updateDynamicStyles call to avoid excessive calculations
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      
+      resizeTimer = setTimeout(() => {
+        updateDynamicStyles();
+      }, 50);
+    });
+
+    // Start observing the timeline viewport
+    resizeObserver.observe(viewport);
+
+    // Initial call once the observer is set up
+    const initialTimer = setTimeout(() => {
+      updateDynamicStyles();
+    }, 100);
+
+    return () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      clearTimeout(initialTimer);
+      resizeObserver.disconnect();
+    };
+  }, [updateDynamicStyles]);
+
+  // Effect for throttling the dynamic style updates on scroll
+  useEffect(() => {
     const viewport = timelineViewportRef.current;
     if (viewport) {
       let throttleTimer = null;
       const scrollHandler = () => {
-        if (throttleTimer) return; // If a timer is already set, do nothing.
+        if (throttleTimer) return;
 
         throttleTimer = setTimeout(() => {
           updateDynamicStyles();
-          throttleTimer = null; // Clear the timer so it can be set again.
-        }, 150); // Increased from 50ms to 150ms for smoother text positioning
+          throttleTimer = null;
+        }, 150);
       };
       
       viewport.addEventListener('scroll', scrollHandler, { passive: true });
@@ -929,7 +994,7 @@ export default function Calendar() {
       return () => {
         viewport.removeEventListener('scroll', scrollHandler);
         if (throttleTimer) {
-          clearTimeout(throttleTimer); // Cleanup on unmount.
+          clearTimeout(throttleTimer);
         }
       };
     }
@@ -947,7 +1012,7 @@ export default function Calendar() {
       } else if (containerWidth < 1024) { // lg breakpoint
         setCompactLevel(2); // Views + lanes compact (Today, H/D/W, E/L/P/G)
       } else if (containerWidth < 1400) { // xl breakpoint
-        setCompactLevel(1); // Only lanes compact (Today, Hrs/Day/Week, E/L/P/G)
+        setCompactLevel(1); // Only lanes compact (Today, Hrs/Day/Week, full lane names)
       } else {
         setCompactLevel(0); // Full labels (Today, Hrs/Day/Week, full lane names)
       }
@@ -957,6 +1022,64 @@ export default function Calendar() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // MODIFIED: Trigger updateDynamicStyles AND initial scroll after loading is complete
+  useEffect(() => {
+    // This useEffect will run when `isInitialLoading` changes to `false`
+    // and `timelineViewportRef.current` and `timelineContentRef.current` become available.
+    if (!isInitialLoading && timelineViewportRef.current && timelineContentRef.current && !hasInitiallyScrolled) {
+      console.log('Initial loading finished, scheduling forced updateDynamicStyles and scroll...');
+      // A slightly longer delay to ensure the browser has fully rendered the initial layout.
+      // This is a last resort to ensure stable DOM measurements after everything else has settled.
+      const initialLayoutStableTimer = setTimeout(() => {
+        console.log('Forcing updateDynamicStyles and initial scroll after initial layout stabilization.');
+        
+        // First, scroll to today
+        const viewport = timelineViewportRef.current;
+        if (viewport) {
+          let scrollTargetOffset = 0;
+
+          if (viewMode === 'hour') {
+            scrollTargetOffset = differenceInHours(today, effectiveDateRange.minDate) * HOUR_WIDTH;
+          } else if (viewMode === 'day') {
+            scrollTargetOffset = differenceInDays(startOfDay(today), effectiveDateRange.minDate) * DAY_WIDTH;
+          } else {
+            const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+            const firstEffectiveWeekStart = startOfWeek(effectiveDateRange.minDate, { weekStartsOn: 1 });
+            const weekIndex = differenceInDays(currentWeekStart, firstEffectiveWeekStart) / 7;
+
+            if (weekIndex >= 0 && weekIndex < weekData.length) {
+              let offsetDays = 0;
+              for (let i = 0; i < weekIndex; i++) {
+                offsetDays += weekData[i].daysInRange;
+              }
+              scrollTargetOffset = offsetDays * WEEK_DAY_WIDTH;
+            } else {
+              scrollTargetOffset = differenceInDays(startOfDay(today), effectiveDateRange.minDate) * WEEK_DAY_WIDTH;
+            }
+          }
+
+          const viewportWidth = viewport.offsetWidth;
+          const scrollLeft = scrollTargetOffset - viewportWidth / 2;
+          
+          console.log('Initial scroll:', {
+            viewMode,
+            scrollTargetOffset,
+            viewportWidth,
+            scrollLeft: Math.max(0, scrollLeft)
+          });
+          
+          viewport.scrollLeft = Math.max(0, scrollLeft);
+          setHasInitiallyScrolled(true);
+        }
+        
+        // Then update dynamic styles
+        updateDynamicStyles();
+      }, 300); // Increased delay for more stability
+
+      return () => clearTimeout(initialLayoutStableTimer);
+    }
+  }, [isInitialLoading, updateDynamicStyles, hasInitiallyScrolled, viewMode, today, effectiveDateRange, weekData]); // Added all dependencies
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -1006,7 +1129,7 @@ export default function Calendar() {
     return todayButtonLabels[mode];
   };
 
-  // NEW: Smarter tooltip positioning logic
+  // Smarter tooltip positioning logic
   const tooltipWidth = 175;
   let tooltipLeft = tooltipPosition.x;
   let tooltipTransform = 'translateX(-50%)';
@@ -1029,431 +1152,451 @@ export default function Calendar() {
   }
 
   return (
-    <div className="min-w-0 p-4 lg:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <CalendarIcon className="w-12 h-12 text-orange-500 flex-shrink-0" />
-            <div>
-              <h1 className="text-4xl font-bold text-white leading-tight">
-                Collective Timeline
-              </h1>
-              <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mt-3">
-          A comprehensive timeline view of all community activities, project milestones, and governance decisions.
-        </p>
-      </div>
-
-      {/* CONTROLS UND TIMELINE */}
-      <div className="mt-16">
-        {/* Controls */}
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
-          {/* Left Group: View Mode Switcher */}
-          <div className="w-full lg:w-auto lg:flex-1 flex justify-start">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode('hour')}
-                className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'hour' ? 'active' : ''}`}
-              >
-                {getViewModeLabel('hour')}
-              </button>
-              <button
-                onClick={() => setViewMode('day')}
-                className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'day' ? 'active' : ''}`}
-              >
-                {getViewModeLabel('day')}
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'week' ? 'active' : ''}`}
-              >
-                {getViewModeLabel('week')}
-              </button>
-            </div>
-          </div>
-          
-          {/* Center Group: Navigation Controls */}
-          <div className="flex-shrink-0 order-first lg:order-none">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => handleNavClick(-1)}
-                variant="outline"
-                size="sm"
-                className="btn-secondary-coherosphere w-14"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {navLabels[viewMode]}
-              </Button>
-              <Button
-                onClick={scrollToToday}
-                variant="outline"
-                size="sm"
-                className={`btn-secondary-coherosphere ${compactLevel >= 3 ? 'w-10' : 'w-24'}`}
-              >
-                {getTodayButtonLabel(viewMode)}
-              </Button>
-              <Button
-                onClick={() => handleNavClick(1)}
-                variant="outline"
-                size="sm"
-                className="btn-secondary-coherosphere w-14"
-              >
-                {navLabels[viewMode]}
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Right Group: Lane Filter Chips */}
-          <div className="w-full lg:w-auto lg:flex-1 flex justify-end overflow-hidden">
-            <div className="flex flex-nowrap gap-2 justify-end">
-              {LANES.map(lane => (
-                <button
-                  key={lane.id}
-                  onClick={() => {
-                    setVisibleLanes(prev =>
-                      prev.includes(lane.id)
-                        ? prev.filter(id => id !== lane.id)
-                        : [...prev, lane.id]
-                    );
-                  }}
-                  className={`filter-chip h-auto justify-between ${compactLevel >= 1 ? 'w-16' : 'w-36'} ${visibleLanes.includes(lane.id) ? 'active' : ''}`}
-                >
-                  <span className="flex-shrink-0 truncate">{getLaneLabel(lane)}</span>
-                  <Badge
-                    variant="secondary"
-                    className={`ml-[3px] transition-colors duration-200 flex-shrink-0 ${compactLevel >= 1 ? 'text-xs px-1' : ''}
-                      ${visibleLanes.includes(lane.id)
-                        ? 'bg-black/20 text-white'
-                        : 'bg-slate-700/50 text-slate-300'
-                      }
-                    `}
-                  >
-                    {Object.keys(visibleLaneCounts).length > 0 ? visibleLaneCounts[lane.id] : laneCounts[lane.id] || 0}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* TIMELINE VIEWPORT */}
-        <div className="relative min-w-0 bg-slate-800/30 backdrop-blur-sm border border-slate-700 rounded-xl overflow-hidden">
-          {/* Loading indicator for dynamic loading */}
-          {isLoadingMore && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-2 text-sm text-slate-300 flex items-center gap-2 z-30"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading more events...
-            </motion.div>
-          )}
-          
-          {/* Orange Viewport Borders */}
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
-          
-          <div
-            ref={timelineViewportRef}
-            className="overflow-x-auto overflow-y-hidden scrollbar-none"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            <div className="relative" style={{
-              width: `${getTimelineWidth()}px`
-            }}>
-              {/* Sticky Header */}
-              <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 h-[60px]">
-                {viewMode === 'hour' ? (
-                  <div className="flex absolute top-0 left-0 h-[60px]">
-                    {allDays.map((dayDate) => (
-                      <React.Fragment key={`day-hours-fragment-${dayDate.toString()}`}>
-                        {Array.from({ length: 24 }).map((_, hourIndex) => {
-                          const hourDate = addHours(dayDate, hourIndex);
-                          const isCurrentHour = isSameHour(hourDate, today);
-                          const isStartOfDay = hourIndex === 0;
-                          const isTextVisible = headerTextVisibility[hourDate.toString()];
-
-                          return (
-                            <div
-                              key={hourDate.toString()}
-                              ref={isCurrentHour ? todayRef : null}
-                              className={`inline-flex flex-col items-center justify-center h-[60px] relative
-                                ${isCurrentHour ? 'bg-orange-500/10' : ''}`}
-                              style={{ width: `${HOUR_WIDTH}px` }}
-                            >
-                              {isStartOfDay && isTextVisible && (
-                                <div className={`text-xs font-bold absolute -top-0.5 left-1 translate-y-[-100%] ${isSameDay(dayDate, today) ? 'text-orange-400' : 'text-slate-400'}`}>
-                                  {format(dayDate, 'MMM d')}
-                                </div>
-                              )}
-                              {isTextVisible && (
-                                <>
-                                  <div className={`text-xs font-medium ${isCurrentHour ? 'text-orange-400' : 'text-slate-400'}`}>
-                                    {format(hourDate, 'HH:mm')}
-                                  </div>
-                                  <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
-                                    hrs
-                                  </div>
-                                  <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
-                                    {format(hourDate, 'EEE')}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                ) : viewMode === 'day' ? (
-                  <div className="flex absolute top-0 left-0 h-[60px]">
-                    {allDays.map((dayDate) => {
-                      const isTodayDay = isSameDay(dayDate, today);
-                      const isTextVisible = headerTextVisibility[dayDate.toString()];
-
-                      return (
-                        <div
-                          key={dayDate.toString()}
-                          ref={isTodayDay ? todayRef : null}
-                          className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
-                            isTodayDay ? 'bg-orange-500/10' : ''
-                          }`}
-                          style={{ width: `${DAY_WIDTH}px` }}
-                        >
-                          {isTextVisible && (
-                            <>
-                              <div className={`text-xs font-medium ${isTodayDay ? 'text-orange-400' : 'text-slate-400'}`}>
-                                {format(dayDate, 'EEE')}
-                              </div>
-                              <div className={`text-sm font-bold ${isTodayDay ? 'text-orange-400' : 'text-white'}`}>
-                                {format(dayDate, 'd')}
-                              </div>
-                              <div className={`text-xs ${isTodayDay ? 'text-orange-400' : 'text-slate-500'}`}>
-                                {format(dayDate, 'MMM')}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex absolute top-0 left-0 h-[60px]">
-                    {weekData.map((week) => {
-                      const weekWidth = week.daysInRange * WEEK_DAY_WIDTH;
-                      const isTextVisible = headerTextVisibility[week.startDate.toString()];
-
-                      return (
-                        <div
-                          key={week.startDate.toString()}
-                          ref={week.isCurrentWeek ? todayRef : null}
-                          className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
-                            week.isCurrentWeek ? 'bg-orange-500/10' : ''
-                          }`}
-                          style={{ width: `${weekWidth}px` }}
-                        >
-                          {isTextVisible && (
-                            <>
-                              <div className={`text-xs font-medium ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-400'}`}>
-                                Week
-                              </div>
-                              <div className={`text-sm font-bold ${week.isCurrentWeek ? 'text-orange-400' : 'text-white'}`}>
-                                {week.weekNumber}
-                              </div>
-                              <div className={`text-xs ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-500'}`}>
-                                {week.year}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Today line */}
-              <div
-                className="absolute top-0 bottom-0 w-px bg-orange-500/50 pointer-events-none z-10"
-                style={{
-                  left: `${
-                    viewMode === 'hour'
-                      ? differenceInHours(today, effectiveDateRange.minDate) * HOUR_WIDTH
-                      : differenceInDays(startOfDay(today), effectiveDateRange.minDate) * (viewMode === 'day' ? DAY_WIDTH : WEEK_DAY_WIDTH)
-                  }px`
-                }}
+    <div className="min-w-0">
+      {isInitialLoading ? (
+        // Fixed Overlay Spinner
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
               />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 lg:p-8"> {/* Applied padding to the content container */}
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="flex items-center gap-4">
+                <CalendarIcon className="w-12 h-12 text-orange-500 flex-shrink-0" />
+                <div>
+                  <h1 className="text-4xl font-bold text-white leading-tight">
+                    Collective Timeline
+                  </h1>
+                  <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
+                </div>
+              </div>
+            </div>
 
-              {/* Swimlanes */}
-              <div className="relative pt-2 pb-4">
-                {separatorLines.map((line, index) => (
-                  <div
-                    key={`separator-${index}`}
-                    className={`absolute top-0 bottom-0 w-px pointer-events-none z-[1] ${
-                      line.isMajor ? 'bg-slate-600/70' : 'bg-slate-600/30'
-                    }`}
-                    style={{ left: `${line.left}px` }}
-                  />
-                ))}
+            <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mt-3">
+              A comprehensive timeline view of all community activities, project milestones, and governance decisions.
+            </p>
+          </div>
 
-                {LANES.map(lane => {
-                  if (!visibleLanes.includes(lane.id)) return null;
-
-                  const laneHeightValue = laneItems.heights[lane.id];
-
-                  return (
-                    <div key={lane.id} className="relative mb-2">
-                      <div
-                        className={`relative ${lane.color} rounded-lg`}
-                        style={{ height: `${laneHeightValue}px` }}
+          <>
+              {/* CONTROLS UND TIMELINE */}
+              <div className="mt-16">
+                {/* Controls */}
+                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
+                  {/* Left Group: View Mode Switcher */}
+                  <div className="w-full lg:w-auto lg:flex-1 flex justify-start">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setViewMode('hour')}
+                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'hour' ? 'active' : ''}`}
                       >
-                        <div className="sticky left-8 top-2 z-10 pointer-events-none inline-block">
-                          <span className="text-xs font-bold text-white tracking-wider uppercase">
-                            {lane.label}
-                          </span>
-                        </div>
+                        {getViewModeLabel('hour')}
+                      </button>
+                      <button
+                        onClick={() => setViewMode('day')}
+                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'day' ? 'active' : ''}`}
+                      >
+                        {getViewModeLabel('day')}
+                      </button>
+                      <button
+                        onClick={() => setViewMode('week')}
+                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'week' ? 'active' : ''}`}
+                      >
+                        {getViewModeLabel('week')}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Center Group: Navigation Controls */}
+                  <div className="flex-shrink-0 order-first lg:order-none">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => handleNavClick(-1)}
+                        variant="outline"
+                        size="sm"
+                        className="btn-secondary-coherosphere w-14"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        {navLabels[viewMode]}
+                      </Button>
+                      <Button
+                        onClick={scrollToToday}
+                        variant="outline"
+                        size="sm"
+                        className={`btn-secondary-coherosphere ${compactLevel >= 3 ? 'w-10' : 'w-24'}`}
+                      >
+                        {getTodayButtonLabel(viewMode)}
+                      </Button>
+                      <Button
+                        onClick={() => handleNavClick(1)}
+                        variant="outline"
+                        size="sm"
+                        className="btn-secondary-coherosphere w-14"
+                      >
+                        {navLabels[viewMode]}
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-                        <div className="absolute inset-0 overflow-hidden">
-                          <div className="relative h-full">
-                            {(laneItems.items[lane.id] || []).map((item) => {
-                              const shouldShowText = window._eventTextVisibility?.[item.id] ?? false;
-                              const textStyle = eventTextAlignments[item.id] || { left: '0px', width: '0px' };
-                              
+                  {/* Right Group: Lane Filter Chips */}
+                  <div className="w-full lg:w-auto lg:flex-1 flex justify-end overflow-hidden">
+                    <div className="flex flex-nowrap gap-2 justify-end">
+                      {LANES.map(lane => (
+                        <button
+                          key={lane.id}
+                          onClick={() => {
+                            setVisibleLanes(prev =>
+                              prev.includes(lane.id)
+                                ? prev.filter(id => id !== lane.id)
+                                : [...prev, lane.id]
+                            );
+                          }}
+                          className={`filter-chip h-auto justify-between ${compactLevel >= 1 ? 'w-16' : 'w-36'} ${visibleLanes.includes(lane.id) ? 'active' : ''}`}
+                        >
+                          <span className="flex-shrink-0 truncate">{getLaneLabel(lane)}</span>
+                          <Badge
+                            variant="secondary"
+                            className={`ml-[3px] transition-colors duration-200 flex-shrink-0 ${compactLevel >= 1 ? 'text-xs px-1' : ''}
+                              ${visibleLanes.includes(lane.id)
+                                ? 'bg-black/20 text-white'
+                                : 'bg-slate-700/50 text-slate-300'
+                              }
+                            `}
+                          >
+                            {Object.keys(visibleLaneCounts).length > 0 ? visibleLaneCounts[lane.id] : laneCounts[lane.id] || 0}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* TIMELINE VIEWPORT */}
+                <div className="relative min-w-0 bg-slate-800/30 backdrop-blur-sm border border-slate-700 rounded-xl overflow-hidden">
+                  {/* Loading indicator for dynamic loading (kept as is, it's a small overlay) */}
+                  {isLoadingMore && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-2 text-sm text-slate-300 flex items-center gap-2 z-30"
+                    >
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading more events...
+                    </motion.div>
+                  )}
+                  
+                  {/* Orange Viewport Borders */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
+                  
+                  <div
+                    ref={timelineViewportRef}
+                    className="overflow-x-auto overflow-y-hidden scrollbar-none"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    <div ref={timelineContentRef} className="relative" style={{
+                      width: `${getTimelineWidth()}px`
+                    }}>
+                      {/* Sticky Header */}
+                      <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 h-[60px]">
+                        {viewMode === 'hour' ? (
+                          <div className="flex absolute top-0 left-0 h-[60px]">
+                            {allDays.map((dayDate) => (
+                              <React.Fragment key={`day-hours-fragment-${dayDate.toString()}`}>
+                                {Array.from({ length: 24 }).map((_, hourIndex) => {
+                                  const hourDate = addHours(dayDate, hourIndex);
+                                  const isCurrentHour = isSameHour(hourDate, today);
+                                  const isStartOfDay = hourIndex === 0;
+                                  const isTextVisible = headerTextVisibility[hourDate.toString()];
+
+                                  return (
+                                    <div
+                                      key={hourDate.toString()}
+                                      ref={isCurrentHour ? todayRef : null}
+                                      className={`inline-flex flex-col items-center justify-center h-[60px] relative
+                                        ${isCurrentHour ? 'bg-orange-500/10' : ''}`}
+                                      style={{ width: `${HOUR_WIDTH}px` }}
+                                    >
+                                      {isStartOfDay && isTextVisible && (
+                                        <div className={`text-xs font-bold absolute -top-0.5 left-1 translate-y-[-100%] ${isSameDay(dayDate, today) ? 'text-orange-400' : 'text-slate-400'}`}>
+                                          {format(dayDate, 'MMM d')}
+                                        </div>
+                                      )}
+                                      {isTextVisible && (
+                                        <>
+                                          <div className={`text-xs font-medium ${isCurrentHour ? 'text-orange-400' : 'text-slate-400'}`}>
+                                            {format(hourDate, 'HH:mm')}
+                                          </div>
+                                          <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
+                                            hrs
+                                          </div>
+                                          <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
+                                            {format(hourDate, 'EEE')}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        ) : viewMode === 'day' ? (
+                          <div className="flex absolute top-0 left-0 h-[60px]">
+                            {allDays.map((dayDate) => {
+                              const isTodayDay = isSameDay(dayDate, today);
+                              const isTextVisible = headerTextVisibility[dayDate.toString()];
+
                               return (
-                                <motion.div
-                                  key={item.id}
-                                  className="absolute cursor-pointer z-[2]"
-                                  style={{
-                                    left: `${item.left}px`,
-                                    width: `${Math.max(2, item.width)}px`,
-                                    top: `${item.top}px`,
-                                    height: `${ITEM_HEIGHT}px`
-                                  }}
-                                  onClick={() => handleItemClick(item)}
-                                  onMouseEnter={(e) => {
-                                    setHoveredItem(item);
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    setTooltipPosition({ 
-                                      x: e.clientX, 
-                                      y: rect.bottom + 8 
-                                    });
-                                  }}
-                                  onMouseMove={(e) => {
-                                    if (hoveredItem && hoveredItem.id === item.id) {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setTooltipPosition({ 
-                                        x: e.clientX, 
-                                        y: rect.bottom + 8 
-                                      });
-                                    }
-                                  }}
-                                  onMouseLeave={() => {
-                                    setHoveredItem(null);
-                                  }}
+                                <div
+                                  key={dayDate.toString()}
+                                  ref={isTodayDay ? todayRef : null}
+                                  className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
+                                    isTodayDay ? 'bg-orange-500/10' : ''
+                                  }`}
+                                  style={{ width: `${DAY_WIDTH}px` }}
                                 >
-                                  <div className={`relative h-full rounded py-1 text-xs font-medium text-white transition-all duration-200 ${
-                                    lane.id === 'events'
-                                      ? 'bg-orange-500/80 hover:bg-orange-500/95'
-                                      : lane.id === 'learning-circles'
-                                      ? 'bg-blue-500/70 hover:bg-blue-500/85'
-                                      : lane.id === 'project-deadlines'
-                                      ? 'bg-slate-600/70 hover:bg-slate-600/85'
-                                      : 'bg-indigo-500/70 hover:bg-indigo-500/85'
-                                  }`}>
-                                    {shouldShowText && (
-                                      <span 
-                                        className="absolute inset-0 px-2 flex items-center justify-center"
-                                        style={{
-                                          left: textStyle.left, 
-                                          width: textStyle.width, 
-                                        }}
-                                      >
-                                        <span className="truncate">{item.title}</span>
-                                      </span>
-                                    )}
-                                    
-                                    {/* The status badge is now positioned absolutely to the right */}
-                                    {item.status && shouldShowText && viewMode !== 'week' && viewMode !== 'hour' && (
-                                      <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0 h-4 whitespace-nowrap bg-black/20 text-white z-10">
-                                        {item.status}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </motion.div>
+                                  {isTextVisible && (
+                                    <>
+                                      <div className={`text-xs font-medium ${isTodayDay ? 'text-orange-400' : 'text-slate-400'}`}>
+                                        {format(dayDate, 'EEE')}
+                                      </div>
+                                      <div className={`text-sm font-bold ${isTodayDay ? 'text-orange-400' : 'text-white'}`}>
+                                        {format(dayDate, 'd')}
+                                      </div>
+                                      <div className={`text-xs ${isTodayDay ? 'text-orange-400' : 'text-slate-500'}`}>
+                                        {format(dayDate, 'MMM')}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                        ) : (
+                          <div className="flex absolute top-0 left-0 h-[60px]">
+                            {weekData.map((week) => {
+                              const weekWidth = week.daysInRange * WEEK_DAY_WIDTH;
+                              const isTextVisible = headerTextVisibility[week.startDate.toString()];
 
-                {/* NEW: Status Bar */}
-                <div className="relative mt-2">
-                  <div className="bg-slate-800 rounded-lg h-[32px] relative">
-                    <div className="absolute inset-0 overflow-hidden">
-                      <div className="relative h-full">
-                        {timeSlotCounts.map((slot, index) => (
-                          <div
-                            key={`status-${index}`}
-                            className="absolute flex items-center justify-center text-xs font-medium text-white"
-                            style={{
-                              left: `${slot.left}px`,
-                              width: `${slot.width}px`,
-                              height: '32px',
-                              top: '0px'
-                            }}
-                          >
-                            {statusBarTextVisibility[index] && slot.count > 0 && slot.count}
+                              return (
+                                <div
+                                  key={week.startDate.toString()}
+                                  ref={week.isCurrentWeek ? todayRef : null}
+                                  className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
+                                    week.isCurrentWeek ? 'bg-orange-500/10' : ''
+                                  }`}
+                                  style={{ width: `${weekWidth}px` }}
+                                >
+                                  {isTextVisible && (
+                                    <>
+                                      <div className={`text-xs font-medium ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-400'}`}>
+                                        Week
+                                      </div>
+                                      <div className={`text-sm font-bold ${week.isCurrentWeek ? 'text-orange-400' : 'text-white'}`}>
+                                        {week.weekNumber}
+                                      </div>
+                                      <div className={`text-xs ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-500'}`}>
+                                        {week.year}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
+                        )}
+                      </div>
+
+                      {/* Today line */}
+                      <div
+                        className="absolute top-0 bottom-0 w-px bg-orange-500/50 pointer-events-none z-10"
+                        style={{
+                          left: `${
+                            viewMode === 'hour'
+                              ? differenceInHours(today, effectiveDateRange.minDate) * HOUR_WIDTH
+                              : differenceInDays(startOfDay(today), effectiveDateRange.minDate) * (viewMode === 'day' ? DAY_WIDTH : WEEK_DAY_WIDTH)
+                          }px`
+                        }}
+                      />
+
+                      {/* Swimlanes */}
+                      <div className="relative pt-2 pb-4">
+                        {separatorLines.map((line, index) => (
+                          <div
+                            key={`separator-${index}`}
+                            className={`absolute top-0 bottom-0 w-px pointer-events-none z-[1] ${
+                              line.isMajor ? 'bg-slate-600/70' : 'bg-slate-600/30'
+                            }`}
+                            style={{ left: `${line.left}px` }}
+                          />
                         ))}
+
+                        {LANES.map(lane => {
+                          if (!visibleLanes.includes(lane.id)) return null;
+
+                          const laneHeightValue = laneItems.heights[lane.id];
+
+                          return (
+                            <div key={lane.id} className="relative mb-2">
+                              <div
+                                className={`relative ${lane.color} rounded-lg`}
+                                style={{ height: `${laneHeightValue}px` }}
+                              >
+                                <div className="sticky left-8 top-2 z-10 pointer-events-none inline-block">
+                                  <span className="text-xs font-bold text-white tracking-wider uppercase">
+                                    {lane.label}
+                                  </span>
+                                </div>
+
+                                <div className="absolute inset-0 overflow-hidden">
+                                  <div className="relative h-full">
+                                    {(laneItems.items[lane.id] || []).map((item) => {
+                                      const shouldShowText = window._eventTextVisibility?.[item.id] ?? true; 
+                                      const textStyle = eventTextAlignments[item.id] || { left: '0px', width: '0px' };
+                                      
+                                      return (
+                                        <motion.div
+                                          key={item.id}
+                                          className="absolute cursor-pointer z-[2]"
+                                          style={{
+                                            left: `${item.left}px`,
+                                            width: `${Math.max(2, item.width)}px`,
+                                            top: `${item.top}px`,
+                                            height: `${ITEM_HEIGHT}px`
+                                          }}
+                                          onClick={() => handleItemClick(item)}
+                                          onMouseEnter={(e) => {
+                                            setHoveredItem(item);
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setTooltipPosition({ 
+                                              x: e.clientX, 
+                                              y: rect.bottom + 8 
+                                            });
+                                          }}
+                                          onMouseMove={(e) => {
+                                            if (hoveredItem && hoveredItem.id === item.id) {
+                                              const rect = e.currentTarget.getBoundingClientRect();
+                                              setTooltipPosition({ 
+                                                x: e.clientX, 
+                                                y: rect.bottom + 8 
+                                              });
+                                            }
+                                          }}
+                                          onMouseLeave={() => {
+                                            setHoveredItem(null);
+                                          }}
+                                        >
+                                          <div className={`relative h-full rounded py-1 text-xs font-medium text-white transition-all duration-200 ${
+                                            lane.id === 'events'
+                                              ? 'bg-orange-500/80 hover:bg-orange-500/95'
+                                              : lane.id === 'learning-circles'
+                                              ? 'bg-blue-500/70 hover:bg-blue-500/85'
+                                              : lane.id === 'project-deadlines'
+                                              ? 'bg-slate-600/70 hover:bg-slate-600/85'
+                                              : 'bg-indigo-500/70 hover:bg-indigo-500/85'
+                                          }`}>
+                                            {shouldShowText && (
+                                              <span 
+                                                className="absolute inset-0 px-2 flex items-center justify-center"
+                                                style={{
+                                                  left: textStyle.left, 
+                                                  width: textStyle.width, 
+                                                }}
+                                              >
+                                                <span className="truncate">{item.title}</span>
+                                              </span>
+                                            )}
+                                            
+                                            {/* The status badge is now positioned absolutely to the right */}
+                                            {item.status && shouldShowText && viewMode !== 'week' && viewMode !== 'hour' && (
+                                              <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0 h-4 whitespace-nowrap bg-black/20 text-white z-10">
+                                                {item.status}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </motion.div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Status Bar */}
+                        <div className="relative mt-2">
+                          <div className="bg-slate-800 rounded-lg h-[32px] relative">
+                            <div className="absolute inset-0 overflow-hidden">
+                              <div className="relative h-full">
+                                {timeSlotCounts.map((slot, index) => (
+                                  <div
+                                    key={`status-${index}`}
+                                    className="absolute flex items-center justify-center text-xs font-medium text-white"
+                                    style={{
+                                      left: `${slot.left}px`,
+                                      width: `${slot.width}px`,
+                                      height: '32px',
+                                      top: '0px'
+                                    }}
+                                  >
+                                    {statusBarTextVisibility[index] && slot.count > 0 && slot.count}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Keyboard Shortcuts Legend */}
+                <motion.div 
+                    className="mt-4 flex justify-center flex-wrap gap-x-6 gap-y-2 text-xs"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">H / D / W</span>
+                        <span className="text-white">View</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">T</span>
+                        <span className="text-white">Today</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">B / F</span>
+                        <span className="text-white">Navigate</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">← / →</span>
+                        <span className="text-white">Scroll</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">E / L / P / G</span>
+                        <span className="text-white">Toggle Lanes</span>
+                    </div>
+                </motion.div>
               </div>
-            </div>
-          </div>
+          </>
         </div>
-
-        {/* Keyboard Shortcuts Legend */}
-        <motion.div 
-            className="mt-4 flex justify-center flex-wrap gap-x-6 gap-y-2 text-xs"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-        >
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">H / D / W</span>
-                <span className="text-white">View</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">T</span>
-                <span className="text-white">Today</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">B / F</span>
-                <span className="text-white">Navigate</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">← / →</span>
-                <span className="text-white">Scroll</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">E / L / P / G</span>
-                <span className="text-white">Toggle Lanes</span>
-            </div>
-        </motion.div>
-      </div>
-
+      )}
+      
       {/* Custom Tooltip */}
       <AnimatePresence>
         {hoveredItem && (
@@ -1479,13 +1622,13 @@ export default function Calendar() {
                 <div className="pt-2 border-t border-slate-700 space-y-2">
                   <div>
                     <span className="text-slate-400 text-xs font-medium uppercase">From:</span>
-                    <p className="text-white text-sm font-medium">
+                    <p className="text-white text-sm">
                       {format(hoveredItem.startDateTime, 'd MMMM yyyy, HH:mm')}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-xs font-medium uppercase">To:</span>
-                    <p className="text-white text-sm font-medium">
+                    <p className="text-white text-sm">
                       {format(hoveredItem.endDateTime, 'd MMMM yyyy, HH:mm')}
                     </p>
                   </div>

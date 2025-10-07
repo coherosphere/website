@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function TransactionRow({ 
@@ -16,6 +17,9 @@ export default function TransactionRow({
   };
 
   const formatDate = (timestamp) => {
+    if (!timestamp) {
+      return 'not confirmed';
+    }
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString('en-GB', { 
       day: 'numeric', 
@@ -51,15 +55,11 @@ export default function TransactionRow({
       >
         {/* Transaction Type & Icon */}
         <div className="col-span-3 flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            isLightning ? 'bg-yellow-500/20' : 'bg-orange-500/20'
-          }`}>
-            {isLightning ? (
-              <span className="text-yellow-400 text-lg font-bold">⚡</span>
+          {isLightning ? (
+              <Zap className="w-5 h-5 text-orange-400" />
             ) : (
-              <span className="text-orange-400 text-sm font-bold">₿</span>
+              <Bitcoin className="w-5 h-5 text-orange-400" />
             )}
-          </div>
           <div>
             <div className="text-white font-medium">
               {isLightning ? 'Lightning' : 'On-chain'}
@@ -77,10 +77,8 @@ export default function TransactionRow({
           ) : (
             <ArrowUpCircle className="w-4 h-4 text-red-500" />
           )}
-          <span className={`font-medium ${
-            isIncoming ? 'text-green-400' : 'text-red-400'
-          }`}>
-            {isIncoming ? 'In' : 'Out'}
+          <span className="font-medium text-white">
+            {isIncoming ? 'Received' : 'Sent'}
           </span>
         </div>
 
@@ -120,24 +118,18 @@ export default function TransactionRow({
           <CardContent className="p-6">
             <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isLightning ? 'bg-yellow-500/20' : 'bg-orange-500/20'
-                }`}>
-                  {isLightning ? (
-                    <span className="text-yellow-400 text-xl font-bold">⚡</span>
+                {isLightning ? (
+                    <Zap className="w-5 h-5 text-orange-400" />
                   ) : (
-                    <span className="text-orange-400 text-base font-bold">₿</span>
+                    <Bitcoin className="w-5 h-5 text-orange-400" />
                   )}
-                </div>
                 <div>
                   <div className="text-white font-semibold">
                     {isLightning ? 'Lightning' : 'On-chain'}
                   </div>
-                   <div className={`font-medium text-sm flex items-center gap-1 ${
-                    isIncoming ? 'text-green-400' : 'text-red-400'
-                  }`}>
+                   <div className="font-medium text-sm flex items-center gap-1 text-white">
                     {isIncoming ? <ArrowDownCircle size={14} /> : <ArrowUpCircle size={14} />}
-                    <span>{isIncoming ? 'In' : 'Out'}</span>
+                    <span>{isIncoming ? 'Received' : 'Sent'}</span>
                   </div>
                 </div>
               </div>

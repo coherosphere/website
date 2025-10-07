@@ -13,13 +13,13 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
   const handleWithdrawSupport = async (projectId) => {
     try {
       if (!user) return;
-      
-      const project = projects.find(p => p.id === projectId);
+
+      const project = projects.find((p) => p.id === projectId);
       if (!project) return;
-      
+
       // Remove user from supporters array
-      const updatedSupporters = (project.supporters || []).filter(id => id !== user.id);
-      
+      const updatedSupporters = (project.supporters || []).filter((id) => id !== user.id);
+
       // Update the project in the database - include all required fields with fallbacks
       await Project.update(projectId, {
         ...project, // Include all existing project data
@@ -28,14 +28,14 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
         community_commitment: project.community_commitment || true, // Fallback
         supporters: updatedSupporters
       });
-      
+
       console.log(`Successfully removed support from project: ${project.title}`);
-      
+
       // Trigger parent component to reload data
       if (onProjectsUpdate) {
         onProjectsUpdate();
       }
-      
+
     } catch (error) {
       console.error('Error withdrawing support from project:', error);
     }
@@ -47,7 +47,7 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
     community: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     learning: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     environment: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    governance: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    governance: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
   };
 
   const statusColors = {
@@ -55,7 +55,7 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
     voting: 'bg-blue-500/20 text-blue-400',
     active: 'bg-green-500/20 text-green-400',
     completed: 'bg-emerald-500/20 text-emerald-400',
-    cancelled: 'bg-red-500/20 text-red-400',
+    cancelled: 'bg-red-500/20 text-red-400'
   };
 
   return (
@@ -72,8 +72,8 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
           <Button
             asChild
             size="sm"
-            className="bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30"
-          >
+            className="bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30">
+
             <Link to={createPageUrl('Projects?filter=no-support')}>
               <Plus className="w-4 h-4 mr-1" />
               new
@@ -82,48 +82,48 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
         </div>
       </CardHeader>
       <CardContent>
-        {projects.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
+        {projects.length === 0 ?
+        <div className="text-center py-8 text-slate-400">
             <Heart className="w-12 h-12 mx-auto mb-4 text-slate-600" />
             <p>You haven't supported any projects yet.</p>
             <p className="text-sm mt-1">Find projects that resonate with your values!</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
+          </div> :
+
+        <div className="space-y-6">
             {projects.map((project) => {
-              const progressPercentage = project.funding_needed > 0 
-                ? Math.min(100, (project.funding_raised / project.funding_needed) * 100)
-                : 0;
-              
-              return (
-                <div
-                  key={project.id}
-                  className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-orange-500/30 transition-all duration-200"
-                >
+            const progressPercentage = project.funding_needed > 0 ?
+            Math.min(100, project.funding_raised / project.funding_needed * 100) :
+            0;
+
+            return (
+              <div
+                key={project.id}
+                className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-orange-500/30 transition-all duration-200">
+
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-white break-words">{project.title}</h4>
                       <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
-                        <Badge variant="outline" className={`border text-xs ${statusColors[project.status]}`}>
+                        <Badge variant="outline" className="text-slate-50 px-2.5 py-0.5 text-xs font-semibold inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border undefined">
                           {project.status}
                         </Badge>
-                        {project.category && (
-                          <Badge variant="outline" className={`border text-xs ${categoryColors[project.category]}`}>
+                        {project.category &&
+                      <Badge variant="outline" className={`border text-xs ${categoryColors[project.category]}`}>
                             {project.category}
                           </Badge>
-                        )}
+                      }
                       </div>
                       <p className="text-slate-400 text-sm line-clamp-2 mb-3">
                         {project.description}
                       </p>
                     </div>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleWithdrawSupport(project.id)}
-                      className="text-slate-500 hover:text-red-400 ml-2"
-                      title="Remove support"
-                    >
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleWithdrawSupport(project.id)}
+                    className="text-slate-500 hover:text-red-400 ml-2"
+                    title="Remove support">
+
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
@@ -148,24 +148,24 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
                       </span>
                     </div>
                     <div className="relative">
-                      <Progress 
-                        value={progressPercentage} 
-                        className="h-2 bg-slate-700"
-                      />
-                      <div 
-                        className="absolute top-0 left-0 h-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${progressPercentage}%` 
-                        }}
-                      />
+                      <Progress
+                      value={progressPercentage}
+                      className="h-2 bg-slate-700" />
+
+                      <div
+                      className="absolute top-0 left-0 h-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${progressPercentage}%`
+                      }} />
+
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                </div>);
+
+          })}
           </div>
-        )}
+        }
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 }

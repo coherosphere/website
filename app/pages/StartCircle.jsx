@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Users, Send, CheckCircle, Eye, FileText } from 'lucide-react';
 
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner'; // Added import
+
 import CircleFormBasics from '@/components/circles/CircleFormBasics';
 import CircleFormReview from '@/components/circles/CircleFormReview';
 import CirclePreview from '@/components/circles/CirclePreview';
@@ -33,7 +35,8 @@ export default function StartCircle() {
     max_participants: null   // New field
   });
   const [currentUser, setCurrentUser] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state for initial data fetch
+  const [isProcessing, setIsProcessing] = useState(false); // isProcessing for form submission
   const [isPublished, setIsPublished] = useState(false);
   const [publishedId, setPublishedId] = useState(null);
   
@@ -44,7 +47,7 @@ export default function StartCircle() {
 
   useEffect(() => {
     const loadData = async () => {
-      setIsProcessing(true);
+      setIsLoading(true); // Use isLoading for initial data fetch
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -77,7 +80,7 @@ export default function StartCircle() {
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
-        setIsProcessing(false);
+        setIsLoading(false); // Use isLoading for initial data fetch
       }
     };
     loadData();
@@ -120,7 +123,7 @@ export default function StartCircle() {
 
   const handlePublish = async () => {
     if (!isStepValid(1)) return; // Ensure step 1 is valid before publishing
-    setIsProcessing(true);
+    setIsProcessing(true); // isProcessing for form submission
     try {
       let result;
       if (isEditMode) {
@@ -134,7 +137,7 @@ export default function StartCircle() {
     } catch (error) {
       console.error("Failed to create circle:", error);
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); // isProcessing for form submission
     }
   };
 
@@ -159,6 +162,30 @@ export default function StartCircle() {
     }
   };
   
+  // Conditional render for initial loading spinner
+  if (isLoading) {
+    return (
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
+    );
+  }
+
   if (isPublished) {
     return (
       <div className="h-full flex items-center justify-center p-4">
@@ -178,7 +205,7 @@ export default function StartCircle() {
                 </Button>
                 <Button 
                   className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600"
-                  onClick={() => navigate(createPageUrl('Learning'))}
+                  onClick={() => navigate(createPageUrl('Learning'))} // This should probably navigate to the published circle's page
                 >
                   View Circle
                 </Button>
@@ -234,7 +261,7 @@ export default function StartCircle() {
           
           <div className="text-center">
             <span className="text-sm text-slate-400">
-              Step {currentStep} of 2: {STEPS[currentStep - 1]?.title}
+              Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1]?.title}
             </span>
           </div>
         </div>
@@ -267,7 +294,7 @@ export default function StartCircle() {
                 </div>
 
                 <div>
-                  {currentStep < 2 ? (
+                  {currentStep < STEPS.length ? (
                     <Button
                       onClick={handleNext}
                       disabled={!isStepValid(currentStep)}

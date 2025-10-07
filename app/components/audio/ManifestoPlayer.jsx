@@ -17,20 +17,20 @@ export default function ManifestoPlayer() {
   };
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-slate-300 hover:text-white hover:bg-slate-800/50 w-full">
+    <div className="text-slate-300 px-6 py-3 flex items-center gap-3 rounded-xl transition-all duration-200 group hover:text-white hover:bg-slate-800/50 w-full">
       {/* Play/Pause as Lucide Icon */}
       <div className="flex-shrink-0">
-        {isPlaying ? (
-          <Pause 
-            className="w-5 h-5 cursor-pointer" 
-            onClick={handlePlayPauseClick}
-          />
-        ) : (
-          <Play 
-            className="w-5 h-5 cursor-pointer" 
-            onClick={handlePlayPauseClick}
-          />
-        )}
+        {isPlaying ?
+        <Pause
+          className="w-5 h-5 cursor-pointer"
+          onClick={handlePlayPauseClick} /> :
+
+
+        <Play
+          className="w-5 h-5 cursor-pointer"
+          onClick={handlePlayPauseClick} />
+
+        }
       </div>
 
       {/* Label */}
@@ -51,10 +51,14 @@ export default function ManifestoPlayer() {
             focus:outline-none focus:ring-1 focus:ring-orange-500
             slider-thumb
           "
+
+
+
+
           style={{
             background: `linear-gradient(to right, #FF6A00 0%, #FF6A00 ${volume * 100}%, #2E3440 ${volume * 100}%, #2E3440 100%)`
-          }}
-        />
+          }} />
+
       </div>
 
       <style jsx>{`
@@ -90,6 +94,6 @@ export default function ManifestoPlayer() {
           transform: scale(1.2);
         }
       `}</style>
-    </div>
-  );
+    </div>);
+
 }

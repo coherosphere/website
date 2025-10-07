@@ -11,6 +11,7 @@ import { createPageUrl } from '@/utils';
 import ProjectCard from "@/components/projects/ProjectCard";
 import ProjectFilters from "@/components/projects/ProjectFilters";
 import ProjectDetail from "@/components/projects/ProjectDetail";
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 export default function Projects() {
   const [projects, setProjects] = useState([]);
@@ -404,42 +405,26 @@ export default function Projects() {
       </motion.div>
 
       {/* Projects Grid */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.4 }}
-      >
-        {isLoading ? (
-          // Loading skeletons
-          Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/40 border border-slate-700 rounded-xl p-6 animate-pulse"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-slate-700 rounded-full" />
-                <div className="flex-1">
-                  <div className="h-5 bg-slate-700 rounded mb-2" />
-                  <div className="h-3 bg-slate-700 rounded w-20" />
-                </div>
-              </div>
-              <div className="space-y-2 mb-4">
-                <div className="h-3 bg-slate-700 rounded" />
-                <div className="h-3 bg-slate-700 rounded w-3/4" />
-              </div>
-              <div className="flex gap-2 mb-4">
-                <div className="h-6 bg-slate-700 rounded w-16" />
-                <div className="h-6 bg-slate-700 rounded w-20" />
-              </div>
-              <div className="h-2 bg-slate-700 rounded mb-4" />
-              <div className="flex gap-3">
-                <div className="h-10 bg-slate-700 rounded flex-1" />
-                <div className="h-10 bg-slate-700 rounded w-20" />
-              </div>
+      {isLoading ? (
+        <>
+          {/* Fixed Overlay Spinner */}
+          <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+            <div className="text-center">
+                <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+              <div className="text-slate-400 text-lg mt-4">Loading...</div>
             </div>
-          ))
-        ) : displayProjects.length === 0 ? (
+          </div>
+          
+          {/* Virtual placeholder */}
+          <div className="min-h-[calc(100vh-500px)]" aria-hidden="true"></div>
+        </>
+      ) : displayProjects.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Lightbulb className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-400 text-lg">
@@ -450,19 +435,25 @@ export default function Projects() {
             </p>
           </div>
         ) : (
-          displayProjects.map((project, index) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              index={index}
-              onCardClick={handleCardClick}
-              onSupport={handleSupport}
-              onVote={handleVote}
-              isDisabled={project.status === 'success' || project.status === 'cancelled'}
-            />
-          ))
-        )}
-      </motion.div>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            {displayProjects.map((project, index) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                index={index}
+                onCardClick={handleCardClick}
+                onSupport={handleSupport}
+                onVote={handleVote}
+                isDisabled={project.status === 'success' || project.status === 'cancelled'}
+              />
+            ))}
+          </motion.div>
+      )}
 
       {/* Project Detail Modal */}
       <ProjectDetail

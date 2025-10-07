@@ -1,6 +1,9 @@
+
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, ChevronDown } from 'lucide-react';
+import { MapPin, ChevronDown, Globe2, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Custom Hub Selector Dropdown Component (following ResonanceSortDropdown style)
@@ -134,6 +137,28 @@ export default function HubSelector({ hubs, selectedHubId, onHubChange }) {
           <MapPin className="w-5 h-5 text-turquoise-400" />
           Local Hub Connection
         </CardTitle>
+        <div className="text-sm text-slate-400 leading-relaxed mt-2 space-y-2">
+          <p>
+            You can only belong to <span className="text-orange-400 font-medium">one primary hub</span> at a time, 
+            but you can change it anytime. Of course, you're welcome to participate in{' '}
+            <Link 
+              to={createPageUrl('GlobalHubs')} 
+              className="text-orange-400 hover:text-orange-300 underline underline-offset-2 inline-flex items-center gap-1"
+            >
+              other hubs
+              <Globe2 className="w-3 h-3" />
+            </Link>
+            {' '}and{' '}
+            <Link 
+              to={createPageUrl('Projects')} 
+              className="text-orange-400 hover:text-orange-300 underline underline-offset-2 inline-flex items-center gap-1"
+            >
+              projects
+              <Lightbulb className="w-3 h-3" />
+            </Link>
+            {' '}across the coherosphere.
+          </p>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
