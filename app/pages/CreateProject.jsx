@@ -12,7 +12,6 @@ import ProjectFormBasics from '@/components/projects/ProjectFormBasics';
 import ProjectFormDetails from '@/components/projects/ProjectFormDetails';
 import ProjectFormReview from '@/components/projects/ProjectFormReview';
 import ProjectPreview from '@/components/projects/ProjectPreview';
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: FileText },
@@ -36,9 +35,6 @@ export default function CreateProject() {
   const [projectData, setProjectData] = useState({
     title: '',
     description: '',
-    goal: '',
-    manifesto_compliance: false,
-    community_commitment: false, // Added: Community-Commitment checkbox
     category: 'community',
     hub_id: null,
     funding_needed: 100000,
@@ -59,9 +55,6 @@ export default function CreateProject() {
             setProjectData({
               ...existingProject,
               funding_needed: existingProject.funding_needed || 0,
-              goal: existingProject.goal || '', // ensure goal is initialized
-              manifesto_compliance: existingProject.manifesto_compliance || false, // ensure compliance is initialized
-              community_commitment: existingProject.community_commitment || false, // Added: ensure community commitment is initialized
             });
           } else {
             console.error('Project not found or user not authorized to edit.');
@@ -87,11 +80,7 @@ export default function CreateProject() {
   const isStepValid = (step) => {
     switch (step) {
       case 1:
-        return projectData.title.length > 3 && 
-               projectData.description.length >= 50 && // Changed: Min length 10 to 50
-               projectData.goal.length >= 40 &&       // Changed: Min length 10 to 40
-               projectData.manifesto_compliance === true &&
-               projectData.community_commitment === true; // Added: Community-Commitment validation
+        return projectData.title.length > 3 && projectData.description.length >= 10;
       case 2:
         return projectData.hub_id && projectData.funding_needed >= 0;
       case 3:
@@ -150,24 +139,13 @@ export default function CreateProject() {
   
   if (isLoading) {
     return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-                 <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
+      <div className="flex items-center justify-center">
+        <motion.div
+          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
     );
   }
   
@@ -259,31 +237,20 @@ export default function CreateProject() {
           <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
             <CardContent className="p-6">
               {renderStepContent()}
-              <div className="flex justify-between items-center pt-6 border-t border-slate-700 mt-8">
-                <div> 
-                   {currentStep > 1 && (
-                    <Button 
-                        variant="outline" 
-                        onClick={handlePrevious} 
-                        className="btn-secondary-coherosphere"
-                    >
-                        Previous
-                    </Button>
-                   )}
-                </div>
-                
-                <div>
-                    {currentStep < STEPS.length ? (
-                      <Button onClick={handleNext} disabled={!isStepValid(currentStep)} className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold">
-                        Next: {STEPS[currentStep].title}
-                      </Button>
-                    ) : (
-                      <Button onClick={handlePublish} disabled={isPublishing || !isStepValid(1) || !isStepValid(2)} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold">
-                        <Send className="w-4 h-4 mr-2" />
-                        {isPublishing ? 'Publishing...' : (isEditMode ? 'Update Project' : 'Publish Project')}
-                      </Button>
-                    )}
-                </div>
+              <div className="flex justify-between pt-6 border-t border-slate-700 mt-8">
+                <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1} className="btn-secondary-coherosphere">
+                  Previous
+                </Button>
+                {currentStep < STEPS.length ? (
+                  <Button onClick={handleNext} disabled={!isStepValid(currentStep)} className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold">
+                    Next
+                  </Button>
+                ) : (
+                  <Button onClick={handlePublish} disabled={isPublishing || !isStepValid(1) || !isStepValid(2)} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold">
+                    <Send className="w-4 h-4 mr-2" />
+                    {isPublishing ? 'Publishing...' : (isEditMode ? 'Update Project' : 'Publish Project')}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

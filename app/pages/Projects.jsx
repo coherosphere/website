@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Project, User } from "@/api/entities";
 import { motion } from "framer-motion";
-import { Lightbulb, Plus, AlertTriangle, Clock, Vote, CheckCircle, Zap, GitMerge, Bitcoin } from "lucide-react";
+import { Lightbulb, Plus, AlertTriangle, Clock, Vote, CheckCircle, X, Bitcoin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from 'react-router-dom';
@@ -11,7 +11,6 @@ import { createPageUrl } from '@/utils';
 import ProjectCard from "@/components/projects/ProjectCard";
 import ProjectFilters from "@/components/projects/ProjectFilters";
 import ProjectDetail from "@/components/projects/ProjectDetail";
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 export default function Projects() {
   const [projects, setProjects] = useState([]);
@@ -24,11 +23,11 @@ export default function Projects() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
-    ideation: 0,
+    proposed: 0,
     voting: 0,
-    funding: 0,
-    implementation: 0,
-    success: 0,
+    active: 0,
+    completed: 0,
+    cancelled: 0,
     satsRaised: 0,
     satsNeeded: 0,
   });
@@ -65,11 +64,11 @@ export default function Projects() {
           
           // Calculate stats
           const statusCounts = {
-            ideation: data.filter(p => p.status === 'ideation').length,
+            proposed: data.filter(p => p.status === 'proposed').length,
             voting: data.filter(p => p.status === 'voting').length,
-            funding: data.filter(p => p.status === 'funding').length,
-            implementation: data.filter(p => p.status === 'launch').length,
-            success: data.filter(p => p.status === 'success').length,
+            active: data.filter(p => p.status === 'active').length,
+            completed: data.filter(p => p.status === 'completed').length,
+            cancelled: data.filter(p => p.status === 'cancelled').length,
             satsRaised: data.reduce((sum, p) => sum + (p.funding_raised || 0), 0),
             satsNeeded: data.reduce((sum, p) => sum + (p.funding_needed || 0), 0),
           };
@@ -96,7 +95,7 @@ export default function Projects() {
 
   const handleCardClick = (project) => {
     // Don't allow interaction with completed or cancelled projects
-    if (project.status === 'success' || project.status === 'cancelled') { // Changed 'completed' to 'success'
+    if (project.status === 'completed' || project.status === 'cancelled') {
       return;
     }
     setSelectedProject(project);
@@ -114,7 +113,7 @@ export default function Projects() {
 
   const handleVote = (project) => {
     // Don't allow voting on completed or cancelled projects
-    if (project.status === 'success' || project.status === 'cancelled') { // Changed 'completed' to 'success'
+    if (project.status === 'completed' || project.status === 'cancelled') {
       return;
     }
     console.log("Voting on project:", project.title);
@@ -254,8 +253,8 @@ export default function Projects() {
             ) : (
               <>
                 <Clock className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.ideation}</div>
-                <div className="text-slate-400 text-sm">Ideation</div>
+                <div className="text-2xl font-bold text-white">{stats.proposed}</div>
+                <div className="text-slate-400 text-sm">Proposed</div>
               </>
             )}
           </CardContent>
@@ -289,27 +288,9 @@ export default function Projects() {
               </div>
             ) : (
               <>
-                <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.funding}</div>
-                <div className="text-slate-400 text-sm">Funding</div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
-          <CardContent className="p-4 text-center">
-            {isLoading ? (
-              <div className="animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
-                <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
-                <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
-              </div>
-            ) : (
-              <>
-                <GitMerge className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.implementation}</div>
-                <div className="text-slate-400 text-sm">Implementation</div>
+                <Lightbulb className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-white">{stats.active}</div>
+                <div className="text-slate-400 text-sm">Active</div>
               </>
             )}
           </CardContent>
@@ -326,8 +307,26 @@ export default function Projects() {
             ) : (
               <>
                 <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.success}</div>
-                <div className="text-slate-400 text-sm">Success</div>
+                <div className="text-2xl font-bold text-white">{stats.completed}</div>
+                <div className="text-slate-400 text-sm">Completed</div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
+          <CardContent className="p-4 text-center">
+            {isLoading ? (
+              <div className="animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
+                <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
+                <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
+              </div>
+            ) : (
+              <>
+                <X className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-white">{stats.cancelled}</div>
+                <div className="text-slate-400 text-sm">Cancelled</div>
               </>
             )}
           </CardContent>
@@ -405,26 +404,42 @@ export default function Projects() {
       </motion.div>
 
       {/* Projects Grid */}
-      {isLoading ? (
-        <>
-          {/* Fixed Overlay Spinner */}
-          <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-            <div className="text-center">
-                <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-              <div className="text-slate-400 text-lg mt-4">Loading...</div>
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+      >
+        {isLoading ? (
+          // Loading skeletons
+          Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-slate-800/40 border border-slate-700 rounded-xl p-6 animate-pulse"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-slate-700 rounded-full" />
+                <div className="flex-1">
+                  <div className="h-5 bg-slate-700 rounded mb-2" />
+                  <div className="h-3 bg-slate-700 rounded w-20" />
+                </div>
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="h-3 bg-slate-700 rounded" />
+                <div className="h-3 bg-slate-700 rounded w-3/4" />
+              </div>
+              <div className="flex gap-2 mb-4">
+                <div className="h-6 bg-slate-700 rounded w-16" />
+                <div className="h-6 bg-slate-700 rounded w-20" />
+              </div>
+              <div className="h-2 bg-slate-700 rounded mb-4" />
+              <div className="flex gap-3">
+                <div className="h-10 bg-slate-700 rounded flex-1" />
+                <div className="h-10 bg-slate-700 rounded w-20" />
+              </div>
             </div>
-          </div>
-          
-          {/* Virtual placeholder */}
-          <div className="min-h-[calc(100vh-500px)]" aria-hidden="true"></div>
-        </>
-      ) : displayProjects.length === 0 ? (
+          ))
+        ) : displayProjects.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Lightbulb className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <p className="text-slate-400 text-lg">
@@ -435,25 +450,19 @@ export default function Projects() {
             </p>
           </div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            {displayProjects.map((project, index) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={index}
-                onCardClick={handleCardClick}
-                onSupport={handleSupport}
-                onVote={handleVote}
-                isDisabled={project.status === 'success' || project.status === 'cancelled'}
-              />
-            ))}
-          </motion.div>
-      )}
+          displayProjects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              index={index}
+              onCardClick={handleCardClick}
+              onSupport={handleSupport}
+              onVote={handleVote}
+              isDisabled={project.status === 'completed' || project.status === 'cancelled'}
+            />
+          ))
+        )}
+      </motion.div>
 
       {/* Project Detail Modal */}
       <ProjectDetail

@@ -6,15 +6,115 @@ import { Activity as ActivityIcon, RefreshCw, Settings, AlertTriangle, Wifi } fr
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { checkNostrActivity } from "@/api/functions";
 
 import ActivityItem from "@/components/activity/ActivityItem";
 import ActivityFilters from "@/components/activity/ActivityFilters";
-import ActivityStats from "@/components/activity/ActivityStats"; // Added import
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
-const NOSTR_CACHE_KEY = 'coherosphere_nostr_status';
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+// Generate realistic mock Nostr activities
+const generateMockActivities = () => {
+  const now = Date.now();
+  const activities = [];
+  
+  // Sample users for interactions
+  const users = [
+    { name: "alice", npub: "npub1alice..." },
+    { name: "bob", npub: "npub1bob..." },
+    { name: "charlie", npub: "npub1charlie..." },
+    { name: "diana", npub: "npub1diana..." },
+    { name: "eve", npub: "npub1eve..." },
+  ];
+
+  // Generate posts
+  const posts = [
+    "Excited to see coherosphere growing into a true resonance space! 🌟",
+    "Building the future of human-AI collaboration, one step at a time",
+    "The beauty of decentralized communities is in their resilience",
+    "Just deployed a new feature for our community governance system",
+    "Reflecting on how technology can amplify human values rather than replace them",
+  ];
+
+  for (let i = 0; i < 15; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    activities.push({
+      id: `post_${i}`,
+      type: 'post',
+      timestamp: now - (i * 3600000 + Math.random() * 1800000),
+      content: posts[Math.floor(Math.random() * posts.length)],
+      from_name: user.name,
+      from_npub: user.npub,
+      reactions: Math.floor(Math.random() * 20),
+      reposts: Math.floor(Math.random() * 8),
+      replies: Math.floor(Math.random() * 12),
+    });
+  }
+
+  // Generate mentions
+  for (let i = 0; i < 8; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    activities.push({
+      id: `mention_${i}`,
+      type: 'mention',
+      timestamp: now - (i * 4200000 + Math.random() * 2100000),
+      content: `Hey @coherosphere, loving the new resonance features! Keep up the great work.`,
+      from_name: user.name,
+      from_npub: user.npub,
+      to_name: "coherosphere",
+      to_npub: "npub1kc9weag...",
+      reactions: Math.floor(Math.random() * 15),
+      replies: Math.floor(Math.random() * 5),
+    });
+  }
+
+  // Generate replies
+  for (let i = 0; i < 12; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    activities.push({
+      id: `reply_${i}`,
+      type: 'reply',
+      timestamp: now - (i * 3000000 + Math.random() * 1500000),
+      content: "This is exactly what the world needs right now. How can I contribute?",
+      from_name: user.name,
+      from_npub: user.npub,
+      reply_to: "Building the future of human-AI collaboration...",
+      reactions: Math.floor(Math.random() * 10),
+      reposts: Math.floor(Math.random() * 3),
+    });
+  }
+
+  // Generate zap-in (received)
+  for (let i = 0; i < 18; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    activities.push({
+      id: `zapin_${i}`,
+      type: 'zap-in',
+      timestamp: now - (i * 2400000 + Math.random() * 1200000),
+      content: "Thanks for building coherosphere! ⚡",
+      from_name: user.name,
+      from_npub: user.npub,
+      to_name: "coherosphere",
+      to_npub: "npub1kc9weag...",
+      amount: Math.floor(Math.random() * 10000) + 1000,
+    });
+  }
+
+  // Generate zap-out (sent)
+  for (let i = 0; i < 10; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    activities.push({
+      id: `zapout_${i}`,
+      type: 'zap-out',
+      timestamp: now - (i * 5400000 + Math.random() * 2700000),
+      content: "Supporting amazing community builders! ⚡",
+      from_name: "coherosphere",
+      from_npub: "npub1kc9weag...",
+      to_name: user.name,
+      to_npub: user.npub,
+      amount: Math.floor(Math.random() * 5000) + 500,
+    });
+  }
+
+  return activities.sort((a, b) => b.timestamp - a.timestamp);
+};
 
 export default function Activity() {
   const [activities, setActivities] = useState([]);
@@ -24,8 +124,6 @@ export default function Activity() {
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [relayInfo, setRelayInfo] = useState({ connected: 0, total: 0 });
-  const [eventStats, setEventStats] = useState({});
 
   // Responsive items per page: 10 on mobile, 20 on desktop
   const getItemsPerPage = () => {
@@ -50,67 +148,61 @@ export default function Activity() {
     }
   }, [itemsPerPage]);
 
+  const relays = [
+    'wss://relay.damus.io',
+    'wss://nos.lol',
+    'wss://relay.snort.social',
+    'wss://relay.primal.net',
+    'wss://eden.nostr.land',
+    'wss://nostr.wine',
+    'wss://relay.nostr.band',
+    'wss://relay.f7z.io'
+  ];
+
   useEffect(() => {
-    fetchActivities(); // Initial fetch uses cache if available
+    loadAdminSettings();
   }, []);
 
-  const fetchActivities = async (forceRefresh = false) => {
+  useEffect(() => {
+    if (adminSettings) {
+      fetchActivities();
+    }
+  }, [adminSettings]);
+
+  const loadAdminSettings = async () => {
+    try {
+      const settings = await AdminSettings.list();
+      if (settings.length > 0) {
+        setAdminSettings(settings[0]);
+      } else {
+        // Create default settings if none exist
+        const defaultSettings = await AdminSettings.create({
+          bitcoin_address: "bc1q7davwh4083qrw8dsnazavamul4ngam99zt7nfy",
+          alby_lightning_address: "coherosphere@getalby.com",
+          nostr_npub: "npub1kc9weag9hjf0p0xz5naamts48rdkzymucvrd9ws8ns7n4x3qq5gsljlnck"
+        });
+        setAdminSettings(defaultSettings);
+      }
+    } catch (err) {
+      setError("Failed to load admin settings");
+    }
+  };
+
+  const fetchActivities = async () => {
     setIsLoading(true);
     setError(null);
 
-    // 1. Try to use cache first, unless a refresh is forced
-    if (!forceRefresh) {
-      try {
-        const cachedData = localStorage.getItem(NOSTR_CACHE_KEY);
-        if (cachedData) {
-          const { data, timestamp } = JSON.parse(cachedData);
-          if (Date.now() - timestamp < CACHE_TTL) {
-            console.log('Using cached Nostr data for Activity page.');
-            setActivities(data.events || []);
-            setRelayInfo({ connected: data.relayCount, total: data.totalRelays });
-            setEventStats(data.eventStats || {});
-            setLastRefresh(new Date(timestamp));
-            setIsLoading(false);
-            return; // Exit if fresh cache is used
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing cached Nostr data:", e);
-        // If cache is corrupted, proceed to fetch from network
-        localStorage.removeItem(NOSTR_CACHE_KEY); 
-      }
-    }
-
-    // 2. Fetch from network if cache is stale, missing, or refresh is forced
     try {
-      const response = await checkNostrActivity();
-      if (response && response.data) {
-        const { events, relayCount, totalRelays, eventStats: stats, error: apiError } = response.data;
-        
-        if (apiError) {
-          setError(apiError);
-        } else {
-          // Set state
-          setActivities(events);
-          setRelayInfo({ connected: relayCount, total: totalRelays });
-          setEventStats(stats);
-          const now = new Date();
-          setLastRefresh(now);
-          setCurrentPage(1);
-
-          // Update cache with new data
-          const cacheEntry = {
-            data: response.data,
-            timestamp: now.getTime()
-          };
-          localStorage.setItem(NOSTR_CACHE_KEY, JSON.stringify(cacheEntry));
-        }
-      } else {
-        throw new Error("Invalid response from status check service.");
-      }
+      // Simulate fetching from Nostr relays
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const mockActivities = generateMockActivities();
+      setActivities(mockActivities);
+      setLastRefresh(new Date());
+      setCurrentPage(1); // Reset to first page on refresh
     } catch (err) {
       console.error("Error fetching Nostr activities:", err);
-      setError("Could not connect to the status check service. The backend might be down.");
+      setError("Failed to fetch activity data from Nostr relays. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -118,10 +210,7 @@ export default function Activity() {
 
   const filteredActivities = selectedFilter === 'all' 
     ? activities 
-    : activities.filter(activity => {
-        if (selectedFilter === 'zap') return activity.type.startsWith('zap');
-        return activity.type === selectedFilter;
-      });
+    : activities.filter(activity => activity.type === selectedFilter);
 
   // Add pagination logic
   const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
@@ -145,11 +234,11 @@ export default function Activity() {
 
   const activityCounts = {
     all: activities.length,
-    post: eventStats.posts || 0,
-    mention: eventStats.mentions || 0,
-    reply: eventStats.replies || 0,
-    reaction: eventStats.reactions || 0,
-    zap: (eventStats.zapsIn || 0) + (eventStats.zapsOut || 0),
+    post: activities.filter(a => a.type === 'post').length,
+    mention: activities.filter(a => a.type === 'mention').length,
+    reply: activities.filter(a => a.type === 'reply').length,
+    'zap-in': activities.filter(a => a.type === 'zap-in').length,
+    'zap-out': activities.filter(a => a.type === 'zap-out').length,
   };
 
   return (
@@ -168,14 +257,13 @@ export default function Activity() {
           </div>
           
           <div className="flex gap-3">
+            {/* Refresh Button removed */}
             <Button
-              onClick={() => fetchActivities(true)} // Force refresh on click
-              disabled={isLoading}
               variant="outline"
               className="btn-secondary-coherosphere"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Refreshing...' : 'Refresh'}
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
             </Button>
           </div>
         </div>
@@ -186,19 +274,28 @@ export default function Activity() {
         </div>
       </div>
 
-      {/* Activity Stats */}
-      <ActivityStats
-        totalEvents={activities.length}
-        posts={eventStats.posts || 0}
-        mentions={eventStats.mentions || 0}
-        replies={eventStats.replies || 0}
-        reactions={eventStats.reactions || 0}
-        zapsIn={eventStats.zapsIn || 0}
-        zapsOut={eventStats.zapsOut || 0}
-        totalZapAmountIn={eventStats.totalZapAmountIn || 0}
-        totalZapAmountOut={eventStats.totalZapAmountOut || 0}
-        isLoading={isLoading}
-      />
+      {/* Relay Status */}
+      <motion.div
+        className="mb-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Wifi className="w-5 h-5 text-green-400" />
+                <span className="text-slate-300 font-medium">Connected Relays</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-400 font-bold">{relays.length}</span>
+                <span className="text-slate-400 text-sm">/ {relays.length} active</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Error Alert */}
       {error && (
@@ -216,7 +313,7 @@ export default function Activity() {
       >
         <ActivityFilters
           selectedFilter={selectedFilter}
-          onFilterChange={handleFilterChange}
+          onFilterChange={handleFilterChange} // Use new handler
           activityCounts={activityCounts}
         />
       </motion.div>
@@ -229,24 +326,13 @@ export default function Activity() {
         transition={{ duration: 0.8, delay: 0.4 }}
       >
         {isLoading ? (
-          <>
-            {/* Fixed Overlay Spinner */}
-            <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-              <div className="text-center">
-                <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-                <div className="text-slate-400 text-lg mt-4">Loading...</div>
-              </div>
-            </div>
-            
-            {/* Virtual placeholder */}
-            <div className="min-h-[calc(100vh-500px)]" aria-hidden="true"></div>
-          </>
+          <div className="flex items-center justify-center py-12">
+            <motion.div
+              className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+          </div>
         ) : paginatedActivities.length === 0 ? (
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-12 text-center">
@@ -291,7 +377,7 @@ export default function Activity() {
                       .filter(page => 
                         page === 1 || 
                         page === totalPages || 
-                        (page >= currentPage - 1 && page <= currentPage + 1) 
+                        (page >= currentPage - 1 && page <= currentPage + 1) // Show current, prev, next
                       )
                       .map((page, index, arr) => (
                         <React.Fragment key={page}>

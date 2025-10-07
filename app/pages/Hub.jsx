@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Hub, Project, Event, User } from "@/api/entities";
 import { motion } from "framer-motion";
-import { MapPin, Users, Lightbulb, Calendar, Plus, Zap, UserCircle, AlertTriangle, Bitcoin, ArrowLeft, Globe2 } from "lucide-react";
+import { MapPin, Users, Lightbulb, Calendar, Plus, Zap, UserCircle, AlertTriangle, Bitcoin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import ProjectDetail from "@/components/projects/ProjectDetail";
 import EventCard from "@/components/hub/EventCard";
 import MemberCard from "@/components/hub/MemberCard";
 import EventDetail from "@/components/hub/EventDetail";
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 // Mock data for members as we can't insert into User entity
 const mockMembers = [
@@ -38,7 +37,6 @@ export default function HubPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('members');
-  const [isExternalHub, setIsExternalHub] = useState(false);
   const [stats, setStats] = useState({
     members: mockMembers.length,
     projects: 0,
@@ -58,53 +56,24 @@ export default function HubPage() {
       setError(null);
       
       try {
-        // Check if there's a hubId parameter in the URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const hubIdParam = urlParams.get('hubId');
+        // Step 1: Get current user to find their selected hub
+        const currentUser = await User.me();
+        const userHubId = currentUser.hub_id;
 
-        let currentHub = null;
-
-        if (hubIdParam) {
-          // External hub view - load the specific hub by ID
-          setIsExternalHub(true);
-          const hubs = await Hub.list();
-          if (!isMounted) return;
-          currentHub = hubs.find(h => h.id === hubIdParam);
-          
-          if (!currentHub) {
-            if (isMounted) {
-              setError("Hub not found. Please select a valid hub from the Global Hubs page.");
-              setIsLoading(false);
-            }
-            return;
+        if (!userHubId) {
+          if (isMounted) {
+            setError("No local hub selected. Please choose your hub in your profile.");
+            setIsLoading(false); // Stop loading if no hub ID
           }
-        } else {
-          // Default behavior - load user's selected hub
-          setIsExternalHub(false);
-          const currentUser = await User.me();
-          const userHubId = currentUser.hub_id;
-
-          if (!userHubId) {
-            if (isMounted) {
-              setError("No local hub selected. Please choose your hub in your profile.");
-              setIsLoading(false); // Stop loading if no hub ID
-            }
-            return; // Exit early
-          }
-
-          const hubs = await Hub.list();
-          if (!isMounted) return;
-          currentHub = hubs.find(h => h.id === userHubId);
-          
-          if (!currentHub) {
-            // If the hub ID from the user profile doesn't match any existing hub
-            if(isMounted) {
-              setError("Your selected hub could not be found. Please choose a new one in your profile.");
-            }
-            return;
-          }
+          return; // Exit early
         }
 
+        // Step 2: Fetch all hubs and find the one matching the user's preference
+        const hubs = await Hub.list();
+        if (!isMounted) return;
+
+        const currentHub = hubs.find(h => h.id === userHubId);
+        
         if (currentHub) {
           if (!isMounted) return;
           setHub(currentHub);
@@ -129,6 +98,11 @@ export default function HubPage() {
               satsRaised,
               satsNeeded,
             });
+          }
+        } else {
+          // If the hub ID from the user profile doesn't match any existing hub
+          if(isMounted) {
+            setError("Your selected hub could not be found. Please choose a new one in your profile.");
           }
         }
       } catch (err) {
@@ -173,12 +147,8 @@ export default function HubPage() {
       // Add user to supporters array
       const updatedSupporters = [...currentSupporters, currentUser.id];
       
-      // Update the project in the database - include all required fields with fallbacks
+      // Update the project in the database
       const updatedProject = await Project.update(project.id, {
-        ...project, // Include all existing project data
-        goal: project.goal || project.description || "Project goal", // Fallback for missing goal
-        manifesto_compliance: project.manifesto_compliance || true, // Fallback
-        community_commitment: project.community_commitment || true, // Fallback
         supporters: updatedSupporters
       });
 
@@ -250,13 +220,6 @@ export default function HubPage() {
                   Go to Profile
                 </Button>
               </Link>
-            ) : error.includes("Hub not found") ? (
-              <Link to={createPageUrl("GlobalHubs")}>
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-                  <Globe2 className="w-4 h-4 mr-2" />
-                  Go to Global Hubs
-                </Button>
-              </Link>
             ) : (
               <Button 
                 onClick={() => window.location.reload()}
@@ -273,24 +236,13 @@ export default function HubPage() {
 
   if (isLoading || !hub) {
     return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-            <CoherosphereNetworkSpinner 
-              size={100}
-              lineWidth={2}
-              dotRadius={6}
-              interval={1100}
-              maxConcurrent={4}
-            />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
+      <div className="flex items-center justify-center min-h-screen">
+        <motion.div
+          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
     );
   }
 
@@ -302,30 +254,14 @@ export default function HubPage() {
           <MapPin className="w-12 h-12 text-orange-500 flex-shrink-0" />
           <div>
             <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
-              {isExternalHub ? `Hub: ${hub.name}` : `Local Hub: ${hub.name}`}
+              Local Hub: {hub.name}
             </h1>
             <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-lg text-slate-400 leading-relaxed max-w-3xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {hub.location} • {isExternalHub ? 'Explore this resonance space and its community.' : 'Your local resonance space – projects, events, and members connected to the global coherosphere.'}
-          </p>
-          
-          {/* Subtle external hub indicator */}
-          {isExternalHub && (
-            <Link to={createPageUrl("Hub")}>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-3 h-3" />
-                Back to my hub
-              </Button>
-            </Link>
-          )}
-        </div>
+        <p className="text-lg text-slate-400 leading-relaxed max-w-3xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          {hub.location} • Your local resonance space – projects, events, and members connected to the global coherosphere.
+        </p>
       </div>
 
       {/* Stats & Actions */}
@@ -386,7 +322,7 @@ export default function HubPage() {
           </Link>
           <Link to={createPageUrl('HostEvent') + `?hubId=${hub.id}`} className="flex-1">
             <Button className="w-full bg-gradient-to-r from-turquoise-500 to-cyan-500 hover:from-turquoise-600 hover:to-cyan-600 text-white font-semibold">
-              <Plus className="w-4 h-4 mr-2" /> Host an Event
+              <Zap className="w-4 h-4 mr-2" /> Host an Event
             </Button>
           </Link>
         </div>

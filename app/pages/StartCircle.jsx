@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Users, Send, CheckCircle, Eye, FileText } from 'lucide-react';
 
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner'; // Added import
-
 import CircleFormBasics from '@/components/circles/CircleFormBasics';
 import CircleFormReview from '@/components/circles/CircleFormReview';
 import CirclePreview from '@/components/circles/CirclePreview';
@@ -27,16 +25,9 @@ export default function StartCircle() {
     frequency: 'Weekly',
     next_session: '',
     participants: [],
-    location_type: 'online', // New field
-    physical_address: '',    // New field
-    online_url: '',          // New field
-    learning_goals: '',      // New field
-    prerequisites: '',       // New field
-    max_participants: null   // New field
   });
   const [currentUser, setCurrentUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // Added isLoading state for initial data fetch
-  const [isProcessing, setIsProcessing] = useState(false); // isProcessing for form submission
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedId, setPublishedId] = useState(null);
   
@@ -47,7 +38,7 @@ export default function StartCircle() {
 
   useEffect(() => {
     const loadData = async () => {
-      setIsLoading(true); // Use isLoading for initial data fetch
+      setIsProcessing(true);
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -57,14 +48,7 @@ export default function StartCircle() {
           if (data && (data.created_by === user.id || user.role === 'admin')) {
             setCircleData({
               ...data,
-              participants: data.participants || [],
-              // Initialize new fields with data values or defaults if not present
-              location_type: data.location_type || 'online',
-              physical_address: data.physical_address || '',
-              online_url: data.online_url || '',
-              learning_goals: data.learning_goals || '',
-              prerequisites: data.prerequisites || '',
-              max_participants: data.max_participants || null
+              participants: data.participants || []
             });
           } else {
             navigate(createPageUrl('Learning'));
@@ -80,7 +64,7 @@ export default function StartCircle() {
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
-        setIsLoading(false); // Use isLoading for initial data fetch
+        setIsProcessing(false);
       }
     };
     loadData();
@@ -93,15 +77,7 @@ export default function StartCircle() {
   const isStepValid = (step) => {
     switch (step) {
       case 1:
-        const isLocationValid = 
-          (circleData.location_type === 'physical' && circleData.physical_address.trim().length > 0) ||
-          (circleData.location_type === 'online' && circleData.online_url.trim().length > 0);
-
-        return circleData.topic.trim().length > 3 && 
-               circleData.description.trim().length > 10 && 
-               !!circleData.frequency && 
-               !!circleData.next_session &&
-               isLocationValid;
+        return circleData.topic.length > 3 && circleData.description.length > 10 && circleData.frequency && circleData.next_session;
       case 2:
         return true;
       default:
@@ -122,8 +98,8 @@ export default function StartCircle() {
   };
 
   const handlePublish = async () => {
-    if (!isStepValid(1)) return; // Ensure step 1 is valid before publishing
-    setIsProcessing(true); // isProcessing for form submission
+    if (!isStepValid(1)) return;
+    setIsProcessing(true);
     try {
       let result;
       if (isEditMode) {
@@ -137,7 +113,7 @@ export default function StartCircle() {
     } catch (error) {
       console.error("Failed to create circle:", error);
     } finally {
-      setIsProcessing(false); // isProcessing for form submission
+      setIsProcessing(false);
     }
   };
 
@@ -162,30 +138,6 @@ export default function StartCircle() {
     }
   };
   
-  // Conditional render for initial loading spinner
-  if (isLoading) {
-    return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-              <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
-    );
-  }
-
   if (isPublished) {
     return (
       <div className="h-full flex items-center justify-center p-4">
@@ -205,7 +157,7 @@ export default function StartCircle() {
                 </Button>
                 <Button 
                   className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600"
-                  onClick={() => navigate(createPageUrl('Learning'))} // This should probably navigate to the published circle's page
+                  onClick={() => navigate(createPageUrl('Learning'))}
                 >
                   View Circle
                 </Button>
@@ -261,7 +213,7 @@ export default function StartCircle() {
           
           <div className="text-center">
             <span className="text-sm text-slate-400">
-              Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1]?.title}
+              Step {currentStep} of 2: {STEPS[currentStep - 1]?.title}
             </span>
           </div>
         </div>
@@ -280,41 +232,36 @@ export default function StartCircle() {
               {renderStepContent()}
               
               {/* Navigation */}
-              <div className="flex justify-between items-center pt-6 border-t border-slate-700 mt-8">
-                 <div> {/* This div is for alignment, can be empty */}
-                  {currentStep > 1 && (
-                    <Button
-                      variant="outline"
-                      onClick={handlePrevious}
-                      className="btn-secondary-coherosphere"
-                    >
-                      Previous
-                    </Button>
-                  )}
-                </div>
-
-                <div>
-                  {currentStep < STEPS.length ? (
-                    <Button
-                      onClick={handleNext}
-                      disabled={!isStepValid(currentStep)}
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold"
-                    >
-                      Next: {STEPS[currentStep].title}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handlePublish}
-                      disabled={!isStepValid(1) || isProcessing}
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      {isProcessing 
-                        ? 'Processing...' 
-                        : (isEditMode ? 'Update Circle' : 'Create Circle')}
-                    </Button>
-                  )}
-                </div>
+              {/* Corrected footer layout for consistency: buttons are direct children of the flex container */}
+              <div className="flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-slate-700 mt-8 gap-4">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1}
+                  className="btn-secondary-coherosphere w-full sm:w-auto"
+                >
+                  Previous
+                </Button>
+                {currentStep < 2 ? (
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isStepValid(currentStep)}
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold w-full sm:w-auto"
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handlePublish}
+                    disabled={!isStepValid(1) || isProcessing}
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold w-full sm:w-auto"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {isProcessing 
+                      ? 'Processing...' 
+                      : (isEditMode ? 'Update Circle' : 'Create Circle')}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

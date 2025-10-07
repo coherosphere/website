@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter import
 import { Button } from '@/components/ui/button';
 import { Event, User } from '@/api/entities';
 import { ArrowLeft, Calendar, MapPin, Users, Zap, Save, Eye, Send, CheckCircle } from 'lucide-react';
@@ -13,7 +13,6 @@ import EventFormTimePlace from '@/components/events/EventFormTimePlace';
 import EventFormResonance from '@/components/events/EventFormResonance';
 import EventFormReview from '@/components/events/EventFormReview';
 import EventPreview from '@/components/events/EventPreview';
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: Calendar },
@@ -52,12 +51,10 @@ export default function HostEvent() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEventId, setEditEventId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
-  // Removed: const [isSavingDraft, setIsSavingDraft] = useState(false); 
+  const [isSavingDraft, setIsSavingDraft] = useState(false); // New state for saving draft
 
   useEffect(() => {
     const loadUserAndData = async () => {
-      setIsLoading(true); // Set loading to true at the start
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -100,8 +97,6 @@ export default function HostEvent() {
         }
       } catch (error) {
         console.error('Error loading data:', error);
-      } finally {
-        setIsLoading(false); // Set loading to false when done
       }
     };
 
@@ -158,7 +153,31 @@ export default function HostEvent() {
     }
   };
 
-  // Removed: handleSaveDraft function
+  // New handler for saving draft
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    try {
+      const eventData = {
+        ...formData,
+        created_by: currentUser?.email || '',
+        status: 'draft' // Save as draft
+      };
+
+      let result;
+      if (isEditMode && editEventId) {
+        result = await Event.update(editEventId, eventData);
+      } else {
+        result = await Event.create(eventData);
+      }
+
+      // Optionally show a toast or message for successful save
+      console.log('Event saved as draft:', result);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -203,29 +222,6 @@ export default function HostEvent() {
         return null;
     }
   };
-
-  if (isLoading) {
-    return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-              <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
-    );
-  }
 
   if (isSuccess) {
     return (
@@ -357,7 +353,18 @@ export default function HostEvent() {
                 {renderStepContent()}
               </motion.div>
             </CardContent>
-            {/* Removed: Consistent Card Footer for actions like Save Draft */}
+            {/* Consistent Card Footer for actions like Save Draft */}
+            <CardFooter className="flex justify-end p-6 border-t border-slate-700">
+              <Button 
+                variant="secondary" 
+                onClick={handleSaveDraft} 
+                disabled={isSavingDraft || isPublishing}
+                className="text-slate-200 hover:bg-slate-700"
+              >
+                {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                {!isSavingDraft && <Save className="ml-2 h-4 w-4" />}
+              </Button>
+            </CardFooter>
           </Card>
         </div>
 

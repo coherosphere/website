@@ -11,7 +11,6 @@ import { ArrowLeft, BookOpen, Send, CheckCircle, Eye, FileText } from 'lucide-re
 import ResourceFormBasics from '@/components/resources/ResourceFormBasics';
 import ResourceFormReview from '@/components/resources/ResourceFormReview';
 import ResourcePreview from '@/components/resources/ResourcePreview';
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Content', icon: FileText },
@@ -30,8 +29,7 @@ export default function ShareKnowledge() {
     related_links: [],
   });
   const [currentUser, setCurrentUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // For initial data load
-  const [isPublishing, setIsPublishing] = useState(false); // For publish action
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedId, setPublishedId] = useState(null);
   
@@ -42,7 +40,7 @@ export default function ShareKnowledge() {
 
   useEffect(() => {
     const loadData = async () => {
-      setIsLoading(true); // Start loading for initial data
+      setIsProcessing(true);
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -57,7 +55,6 @@ export default function ShareKnowledge() {
             });
           } else {
             navigate(createPageUrl('Learning'));
-            return; // Stop further execution if navigation occurs
           }
         } else {
           setResourceData(prev => ({ ...prev, creator_id: user.id }));
@@ -65,7 +62,7 @@ export default function ShareKnowledge() {
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
-        setIsLoading(false); // End loading regardless of success or failure
+        setIsProcessing(false);
       }
     };
     loadData();
@@ -100,7 +97,7 @@ export default function ShareKnowledge() {
 
   const handlePublish = async () => {
     if (!isStepValid(1)) return;
-    setIsPublishing(true); // Start publishing
+    setIsProcessing(true);
     try {
       let result;
       if (isEditMode) {
@@ -114,7 +111,7 @@ export default function ShareKnowledge() {
     } catch (error) {
       console.error("Failed to publish resource:", error);
     } finally {
-      setIsPublishing(false); // End publishing
+      setIsProcessing(false);
     }
   };
 
@@ -139,29 +136,6 @@ export default function ShareKnowledge() {
     }
   };
   
-  if (isLoading) {
-    return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-              <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
-    );
-  }
-
   if (isPublished) {
      return (
       <div className="p-4 lg:p-8 flex items-center justify-center">
@@ -252,36 +226,32 @@ export default function ShareKnowledge() {
               {renderStepContent()}
               
               {/* Navigation */}
-              <div className="flex justify-between items-center pt-6 border-t border-slate-700 mt-8">
-                <div> {/* This div is for alignment, can be empty */}
-                  {currentStep > 1 && (
-                    <Button
-                      variant="outline"
-                      onClick={handlePrevious}
-                      className="btn-secondary-coherosphere"
-                    >
-                      Previous
-                    </Button>
-                  )}
-                </div>
-
-                <div>
+              <div className="flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-slate-700 mt-8 gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentStep === 1}
+                    className="btn-secondary-coherosphere w-full sm:w-auto"
+                  >
+                    Previous
+                  </Button>
                   {currentStep < 2 ? (
                     <Button
                       onClick={handleNext}
                       disabled={!isStepValid(currentStep)}
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold"
+                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold w-full sm:w-auto"
                     >
-                      Next: {STEPS[currentStep].title}
+                      Next
                     </Button>
                   ) : (
                     <Button
                       onClick={handlePublish}
-                      disabled={!isStepValid(1) || isPublishing}
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold"
+                      disabled={!isStepValid(1) || isProcessing}
+                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold w-full sm:w-auto"
                     >
                       <Send className="w-4 h-4 mr-2" />
-                      {isPublishing 
+                      {isProcessing 
                         ? 'Processing...' 
                         : (isEditMode ? 'Update Resource' : 'Publish Resource')}
                     </Button>
@@ -293,7 +263,7 @@ export default function ShareKnowledge() {
         </div>
 
         {/* Right Panel - Live Preview */}
-        <div className="hidden xl:block"> {/* Corrected the class name to `xl:block` from `xl:ResourcePreview` */}
+        <div className="hidden xl:block">
           <div className="sticky top-8">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <Eye className="w-5 h-5 text-slate-400" />

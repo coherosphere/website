@@ -1,20 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent } from '@/components/ui/card';
-import { Lightbulb, Calendar, BookOpen, ArrowRight, Users, Handshake, MessageSquare } from 'lucide-react';
-import { Resource, Event, Project, LearningCircle, NostrMessage } from '@/api/entities';
-import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { Lightbulb, Calendar, BookOpen, ArrowRight, Users, Handshake } from 'lucide-react';
+import { Resource, Event, Project, LearningCircle } from '@/api/entities';
 
 const participationOptions = [
-  {
-    title: 'Send Message',
-    description: 'Connect directly with community members through private, encrypted Nostr messages.',
-    link: createPageUrl('Messages'),
-    icon: MessageSquare,
-    color: 'hover:border-cyan-500/50',
-  },
   {
     title: 'Share Knowledge',
     description: 'Contribute an article, guide, or tutorial to our collective Library of Resilience.',
@@ -47,7 +40,6 @@ const participationOptions = [
 
 export default function Engage() {
   const [stats, setStats] = useState({
-    messages: 0,
     knowledge: 0,
     events: 0,
     projects: 0,
@@ -58,8 +50,7 @@ export default function Engage() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const [messages, resources, events, projects, circles] = await Promise.all([
-          NostrMessage.list(),
+        const [resources, events, projects, circles] = await Promise.all([
           Resource.list(),
           Event.list(),
           Project.list(),
@@ -67,7 +58,6 @@ export default function Engage() {
         ]);
 
         setStats({
-          messages: messages.length,
           knowledge: resources.length,
           events: events.length,
           projects: projects.length,
@@ -84,32 +74,9 @@ export default function Engage() {
     loadStats();
   }, []);
 
-  if (isLoading) {
-    return (
-      <>
-        {/* Fixed Overlay Spinner */}
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
-          <div className="text-center">
-              <CoherosphereNetworkSpinner 
-                size={100}
-                lineWidth={2}
-                dotRadius={6}
-                interval={1100}
-                maxConcurrent={4}
-              />
-            <div className="text-slate-400 text-lg mt-4">Loading...</div>
-          </div>
-        </div>
-        
-        {/* Virtual placeholder */}
-        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
-      </>
-    );
-  }
-
   return (
     <div className="p-4 lg:p-8 text-white">
-      <div className=""> 
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
           className="mb-8"
@@ -133,64 +100,86 @@ export default function Engage() {
 
         {/* Stats Bar */}
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1 }}
         >
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-4 text-center">
-              <>
-                <MessageSquare className="w-8 h-8 text-cyan-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.messages}</div>
-                <div className="text-slate-400 text-sm">Messages</div>
-              </>
+              {isLoading ? (
+                <div className="animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
+                  <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
+                  <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
+                </div>
+              ) : (
+                <>
+                  <BookOpen className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white">{stats.knowledge}</div>
+                  <div className="text-slate-400 text-sm">Knowledge</div>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-4 text-center">
-              <>
-                <BookOpen className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.knowledge}</div>
-                <div className="text-slate-400 text-sm">Knowledge</div>
-              </>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
-            <CardContent className="p-4 text-center">
-              <>
-                <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.events}</div>
-                <div className="text-slate-400 text-sm">Events</div>
-              </>
+              {isLoading ? (
+                <div className="animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
+                  <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
+                  <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
+                </div>
+              ) : (
+                <>
+                  <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white">{stats.events}</div>
+                  <div className="text-slate-400 text-sm">Events</div>
+                </>
+              )}
             </CardContent>
           </Card>
           
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-4 text-center">
-              <>
-                <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.circles}</div>
-                <div className="text-slate-400 text-sm">Circles</div>
-              </>
+              {isLoading ? (
+                <div className="animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
+                  <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
+                  <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
+                </div>
+              ) : (
+                <>
+                  <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white">{stats.circles}</div>
+                  <div className="text-slate-400 text-sm">Circles</div>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
             <CardContent className="p-4 text-center">
-              <>
-                <Lightbulb className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stats.projects}</div>
-                <div className="text-slate-400 text-sm">Projects</div>
-              </>
+              {isLoading ? (
+                <div className="animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-slate-600 mx-auto mb-2"></div>
+                  <div className="h-6 w-12 bg-slate-600 rounded mx-auto mb-2"></div>
+                  <div className="h-4 w-16 bg-slate-600 rounded mx-auto"></div>
+                </div>
+              ) : (
+                <>
+                  <Lightbulb className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-white">{stats.projects}</div>
+                  <div className="text-slate-400 text-sm">Projects</div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Participation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
           {participationOptions.map((option, index) => (
             <motion.div
               key={option.title}

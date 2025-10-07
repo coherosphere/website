@@ -40,26 +40,6 @@ import Brand from "./Brand";
 
 import Terms from "./Terms";
 
-import FAQ from "./FAQ";
-
-import dashboard from "./dashboard";
-
-import Calendar from "./Calendar";
-
-import Donate from "./Donate";
-
-import Status from "./Status";
-
-import Spinner from "./Spinner";
-
-import AddKnowledge from "./AddKnowledge";
-
-import Chat from "./Chat";
-
-import GlobalHubs from "./GlobalHubs";
-
-import Messages from "./Messages";
-
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -103,26 +83,6 @@ const PAGES = {
     Brand: Brand,
     
     Terms: Terms,
-    
-    FAQ: FAQ,
-    
-    dashboard: dashboard,
-    
-    Calendar: Calendar,
-    
-    Donate: Donate,
-    
-    Status: Status,
-    
-    Spinner: Spinner,
-    
-    AddKnowledge: AddKnowledge,
-    
-    Chat: Chat,
-    
-    GlobalHubs: GlobalHubs,
-    
-    Messages: Messages,
     
 }
 
@@ -190,26 +150,6 @@ function PagesContent() {
                 <Route path="/Brand" element={<Brand />} />
                 
                 <Route path="/Terms" element={<Terms />} />
-                
-                <Route path="/FAQ" element={<FAQ />} />
-                
-                <Route path="/dashboard" element={<dashboard />} />
-                
-                <Route path="/Calendar" element={<Calendar />} />
-                
-                <Route path="/Donate" element={<Donate />} />
-                
-                <Route path="/Status" element={<Status />} />
-                
-                <Route path="/Spinner" element={<Spinner />} />
-                
-                <Route path="/AddKnowledge" element={<AddKnowledge />} />
-                
-                <Route path="/Chat" element={<Chat />} />
-                
-                <Route path="/GlobalHubs" element={<GlobalHubs />} />
-                
-                <Route path="/Messages" element={<Messages />} />
                 
             </Routes>
         </Layout>
