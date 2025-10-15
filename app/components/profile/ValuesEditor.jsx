@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ export default function ValuesEditor({ values, onValuesChange }) {
     <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-3">
-          <Heart className="w-5 h-5 text-red-400" />
+          <Heart className="w-5 h-5 text-white" />
           Resonance Values
         </CardTitle>
         <p className="text-slate-400 text-sm">

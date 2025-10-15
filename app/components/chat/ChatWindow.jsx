@@ -10,7 +10,6 @@ import {
   SendHorizonal,
   BookOpen,
   Brain,
-  Loader2,
   Globe,
   Sparkles,
   RotateCcw,
@@ -21,8 +20,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function ChatWindow({ className = "", showHeader = true }) {
+export default function ChatWindow({ className = "", showHeader = false }) {
   const { messages, addMessage, clearMessages } = useChatContext();
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,8 +42,7 @@ export default function ChatWindow({ className = "", showHeader = true }) {
     loadUser();
   }, []);
 
-  // Smooth scroll to bottom of chat only (not whole page)
-  const scrollChatToBottom = () => {
+  const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: 'smooth',
@@ -53,15 +52,14 @@ export default function ChatWindow({ className = "", showHeader = true }) {
     }
   };
 
-  // Auto-scroll when new messages arrive
   useEffect(() => {
     const timer = setTimeout(() => {
-      scrollChatToBottom();
+      scrollToBottom();
     }, 100);
     return () => clearTimeout(timer);
   }, [messages]);
 
-  const sendMessage = async () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
     const userMessageContent = inputMessage.trim();
@@ -115,26 +113,19 @@ export default function ChatWindow({ className = "", showHeader = true }) {
     });
   };
 
+  // Limit to last 10 messages for both mobile and desktop
+  const displayedMessages = messages.slice(-10);
+
   return (
-    <div className={`flex flex-col bg-slate-800/95 backdrop-blur-sm border border-slate-700 rounded-xl overflow-hidden ${className}`}>
-      {/* Optional Header */}
+    <Card className={`flex flex-col bg-slate-800/95 backdrop-blur-sm border-slate-700 ${className}`}>
       {showHeader && (
-        <div className="flex-shrink-0 p-4 border-b border-slate-700">
+        <CardHeader className="border-b border-slate-700 pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">core</h3>
-                <p className="text-slate-400 text-xs">AI companion for coherosphere</p>
-              </div>
-            </div>
-            
-            {/* Clear Chat Button */}
+            <CardTitle className="text-white flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-orange-500" />
+              core
+            </CardTitle>
+
             <Button
               onClick={clearMessages}
               variant="ghost"
@@ -145,13 +136,12 @@ export default function ChatWindow({ className = "", showHeader = true }) {
               <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
-        </div>
+        </CardHeader>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         <AnimatePresence initial={false}>
-          {messages.map((message) => (
+          {displayedMessages.map((message) => (
             message.type === 'bot' ? (
               <motion.div
                 key={message.id}
@@ -178,7 +168,6 @@ export default function ChatWindow({ className = "", showHeader = true }) {
                       {message.content}
                     </ReactMarkdown>
                     
-                    {/* Show relevant links if available */}
                     {message.relevant_links && message.relevant_links.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-600/50">
                         <p className="text-xs text-slate-400 mb-2" style={{ fontFamily: 'Nunito Sans, system-ui, sans-serif' }}>
@@ -263,34 +252,29 @@ export default function ChatWindow({ className = "", showHeader = true }) {
           ))}
         </AnimatePresence>
 
-        {/* Loading indicator */}
-        <AnimatePresence>
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="flex justify-start gap-3"
-            >
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
-                <MessageCircle className="w-3.5 h-3.5 text-white" />
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex justify-start gap-3"
+          >
+            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
+              <MessageCircle className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="bg-slate-800/70 text-slate-100 rounded-xl px-3 py-2 border border-slate-600/50">
+              <div className="text-sm text-slate-300">
+                core is thinking...
               </div>
-              <div className="bg-slate-800/70 text-slate-100 rounded-xl px-3 py-2 border border-slate-600/50">
-                <div className="flex items-center gap-2 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>core is thinking...</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
 
         <div ref={messagesEndRef} />
-      </div>
+      </CardContent>
 
-      {/* Input Area */}
       <div className="flex-shrink-0 p-4 border-t border-slate-700">
-        <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex gap-2">
           <Input
             ref={inputRef}
             value={inputMessage}
@@ -304,11 +288,7 @@ export default function ChatWindow({ className = "", showHeader = true }) {
             disabled={isLoading || !inputMessage.trim()}
             className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-3 flex-shrink-0"
           >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <SendHorizonal className="w-4 h-4" />
-            )}
+            <SendHorizonal className="w-4 h-4" />
           </Button>
         </form>
 
@@ -323,6 +303,6 @@ export default function ChatWindow({ className = "", showHeader = true }) {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

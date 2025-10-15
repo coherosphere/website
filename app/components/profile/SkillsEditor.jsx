@@ -48,7 +48,7 @@ export default function SkillsEditor({ skills, onSkillsChange }) {
     <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-3">
-          <BrainCircuit className="w-5 h-5 text-blue-400" />
+          <BrainCircuit className="w-5 h-5 text-white" />
           Skills & Abilities
         </CardTitle>
         <p className="text-slate-400 text-sm">

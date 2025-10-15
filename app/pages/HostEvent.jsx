@@ -1,18 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter import
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Event, User } from '@/api/entities';
 import { ArrowLeft, Calendar, MapPin, Users, Zap, Save, Eye, Send, CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 
 import EventFormBasics from '@/components/events/EventFormBasics';
 import EventFormTimePlace from '@/components/events/EventFormTimePlace';
 import EventFormResonance from '@/components/events/EventFormResonance';
 import EventFormReview from '@/components/events/EventFormReview';
 import EventPreview from '@/components/events/EventPreview';
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: Calendar },
@@ -51,10 +53,12 @@ export default function HostEvent() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEventId, setEditEventId] = useState(null);
-  const [isSavingDraft, setIsSavingDraft] = useState(false); // New state for saving draft
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
+  // Removed: const [isSavingDraft, setIsSavingDraft] = useState(false); 
 
   useEffect(() => {
     const loadUserAndData = async () => {
+      setIsLoading(true); // Set loading to true at the start
       try {
         const user = await User.me();
         setCurrentUser(user);
@@ -97,6 +101,8 @@ export default function HostEvent() {
         }
       } catch (error) {
         console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false); // Set loading to false when done
       }
     };
 
@@ -133,14 +139,105 @@ export default function HostEvent() {
         result = await Event.update(editEventId, eventData);
       } else {
         result = await Event.create(eventData);
+        
+        // Record resonance event for NEW event hosting
+        try {
+          const attendeeCount = formData.attendees?.length || 0;
+          
+          // Base magnitude for creating an event
+          let magnitude = 1.0; // Base reward for creating the event
+          
+          // Bonus tiers based on participation
+          if (attendeeCount >= 3) {
+            magnitude += 2.0; // +2.0 for 3+ participants (total: 3.0)
+          }
+          if (attendeeCount >= 10) {
+            magnitude += 1.0; // +1.0 for 10+ participants (total: 4.0)
+          }
+          if (attendeeCount >= 25) {
+            magnitude += 2.0; // +2.0 for 25+ participants (total: 6.0)
+          }
+
+          // Calculate alignment score based on event values/goals
+          let alignmentScore = 1.0;
+          
+          // Check if event goals/values align with manifesto values
+          const manifestoValues = ['resilience', 'transparency', 'collective', 'decentralization', 'trustless'];
+          const eventGoals = (formData.goals || []).map(g => g.toLowerCase());
+          const eventValues = (formData.values || []).map(v => v.toLowerCase());
+          
+          const hasManifestoAlignment = [...eventGoals, ...eventValues].some(item =>
+            manifestoValues.some(value => item.includes(value))
+          );
+          
+          if (hasManifestoAlignment) {
+            alignmentScore = 1.2; // Bonus for manifesto alignment
+          }
+
+          // Record for the host (User entity)
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'user',
+            entity_id: currentUser.id,
+            action_type: 'EVENT_HOSTED',
+            magnitude: magnitude,
+            alignment_score: alignmentScore,
+            hub_id: formData.hub_id,
+            metadata: {
+              event_id: result.id,
+              event_title: result.title,
+              attendee_count: attendeeCount,
+              category: result.category,
+              location_type: result.location_type,
+              has_manifesto_alignment: hasManifestoAlignment,
+              has_participation_bonus: attendeeCount >= 3
+            }
+          });
+
+          // Record for the event itself
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'event',
+            entity_id: result.id,
+            action_type: 'EVENT_HOSTED',
+            magnitude: magnitude,
+            alignment_score: alignmentScore,
+            hub_id: formData.hub_id,
+            metadata: {
+              organizer_id: currentUser.id,
+              attendee_count: attendeeCount,
+              category: result.category
+            }
+          });
+
+          // If event is assigned to a hub, give the hub a small bonus
+          if (formData.hub_id) {
+            await base44.functions.invoke('recordResonanceEvent', {
+              entity_type: 'hub',
+              entity_id: formData.hub_id,
+              action_type: 'EVENT_HOSTED',
+              magnitude: 0.5,
+              alignment_score: alignmentScore,
+              metadata: {
+                event_id: result.id,
+                event_title: result.title,
+                organizer_id: currentUser.id,
+                attendee_count: attendeeCount
+              }
+            });
+          }
+
+          console.log(`✓ Event hosting resonance recorded (${magnitude} points, ${attendeeCount} attendees)`);
+        } catch (error) {
+          console.error('Failed to record resonance event:', error);
+          // Don't fail the publish if resonance recording fails
+        }
       }
 
       setIsSuccess(true);
       
       setTimeout(() => {
-        // Redirect to event page if created/updated, otherwise to Hub
-        if (result && result.id) {
-          navigate(createPageUrl('Event', { id: result.id }));
+        // Redirect back to Hub after event creation/update
+        if (formData.hub_id) {
+          navigate(createPageUrl('Hub') + `?hubId=${formData.hub_id}`);
         } else {
           navigate(createPageUrl('Hub'));
         }
@@ -153,31 +250,7 @@ export default function HostEvent() {
     }
   };
 
-  // New handler for saving draft
-  const handleSaveDraft = async () => {
-    setIsSavingDraft(true);
-    try {
-      const eventData = {
-        ...formData,
-        created_by: currentUser?.email || '',
-        status: 'draft' // Save as draft
-      };
-
-      let result;
-      if (isEditMode && editEventId) {
-        result = await Event.update(editEventId, eventData);
-      } else {
-        result = await Event.create(eventData);
-      }
-
-      // Optionally show a toast or message for successful save
-      console.log('Event saved as draft:', result);
-    } catch (error) {
-      console.error('Error saving draft:', error);
-    } finally {
-      setIsSavingDraft(false);
-    }
-  };
+  // Removed: handleSaveDraft function
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -223,6 +296,29 @@ export default function HostEvent() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
+    );
+  }
+
   if (isSuccess) {
     return (
       <div className="h-full flex items-center justify-center p-4">
@@ -249,9 +345,6 @@ export default function HostEvent() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <Calendar className="w-12 h-12 text-orange-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
@@ -260,6 +353,9 @@ export default function HostEvent() {
             <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
           </div>
         </div>
+        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          Create spaces for connection, learning, and collective resonance.
+        </p>
         
         {/* Step Indicator - Desktop */}
         <div className="hidden lg:flex justify-center">
@@ -311,7 +407,7 @@ export default function HostEvent() {
                 <React.Fragment key={step.id}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors flex-shrink-0 ${
                     isActive ? 'bg-orange-500 text-white' :
-                    isCompleted ? 'bg-green-500 text-white' :
+                    isCompleted ? 'bg-green-500' :
                     'bg-slate-700 text-slate-400'
                   }`}>
                     {isCompleted ? <CheckCircle className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
@@ -353,18 +449,7 @@ export default function HostEvent() {
                 {renderStepContent()}
               </motion.div>
             </CardContent>
-            {/* Consistent Card Footer for actions like Save Draft */}
-            <CardFooter className="flex justify-end p-6 border-t border-slate-700">
-              <Button 
-                variant="secondary" 
-                onClick={handleSaveDraft} 
-                disabled={isSavingDraft || isPublishing}
-                className="text-slate-200 hover:bg-slate-700"
-              >
-                {isSavingDraft ? 'Saving...' : 'Save Draft'}
-                {!isSavingDraft && <Save className="ml-2 h-4 w-4" />}
-              </Button>
-            </CardFooter>
+            {/* Removed: Consistent Card Footer for actions like Save Draft */}
           </Card>
         </div>
 

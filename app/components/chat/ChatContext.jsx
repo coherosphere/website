@@ -27,10 +27,10 @@ export const ChatProvider = ({ children }) => {
   ]);
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
   
-  // Throttling mechanism for refreshUnreadCount
+  // Throttling mechanism for refreshUnreadCount - INCREASED TO 15 SECONDS
   const lastRefreshTime = useRef(0);
   const isRefreshing = useRef(false);
-  const THROTTLE_INTERVAL = 5000; // Minimum 5 seconds between refreshes
+  const THROTTLE_INTERVAL = 15000; // Increased from 5s to 15s to avoid rate limits
 
   // Load messages from localStorage on mount
   useEffect(() => {
@@ -66,7 +66,7 @@ export const ChatProvider = ({ children }) => {
       return;
     }
 
-    // Throttling: Don't refresh if we refreshed less than 5 seconds ago
+    // Throttling: Don't refresh if we refreshed less than 15 seconds ago
     const now = Date.now();
     if (now - lastRefreshTime.current < THROTTLE_INTERVAL) {
       console.log('Throttling refreshUnreadCount - too soon since last refresh');
@@ -87,19 +87,25 @@ export const ChatProvider = ({ children }) => {
       const unread = data.conversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
       setTotalUnreadMessages(unread);
     } catch (error) {
-      console.error('Error fetching unread message count:', error);
+      // Better error handling - don't spam console on rate limits
+      if (error.response?.data?.error === 'Rate limit exceeded') {
+        console.log('Rate limit hit for unread count refresh - will retry later');
+      } else {
+        console.error('Error fetching unread message count:', error);
+      }
+      // Don't throw - just silently fail and try again next interval
     } finally {
       isRefreshing.current = false;
     }
   };
 
-  // Auto-refresh as fallback (every 45 seconds)
+  // Auto-refresh as fallback (every 60 seconds instead of 45)
   useEffect(() => {
     let intervalId;
     
     if (isAuthenticated && currentUser?.nostr_pubkey) {
       refreshUnreadCount(); // Initial fetch
-      intervalId = setInterval(refreshUnreadCount, 45000); // Update every 45 seconds
+      intervalId = setInterval(refreshUnreadCount, 60000); // Update every 60 seconds (increased from 45s)
     } else {
       setTotalUnreadMessages(0);
     }

@@ -13,12 +13,13 @@ import {
   Calendar,
   Target,
   Heart,
-  HeartOff, // Added HeartOff icon
+  HeartOff,
   Vote,
   ExternalLink,
   TrendingUp,
   Clock
 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 export default function ProjectDetail({ project, isOpen, onClose, onSupport, onVote, onProjectUpdate }) {
   const [currentUser, setCurrentUser] = React.useState(null);
@@ -162,6 +163,84 @@ export default function ProjectDetail({ project, isOpen, onClose, onSupport, onV
       }
 
       const updatedSupporters = [...currentSupporters, currentUser.id];
+      
+      // Record resonance event for PROJECT_SUPPORT
+      try {
+        // Base magnitude for supporting a project
+        let magnitude = 2.0;
+        
+        // Check if user is creator or contributor (prevent double-counting)
+        const isCreator = project.creator_id === currentUser.id;
+        const isContributor = false; // TODO: Add contributors field if needed
+        
+        if (!isCreator && !isContributor) {
+          // Calculate alignment score
+          let alignmentScore = 1.0;
+          
+          if (project.manifesto_compliance === true) {
+            alignmentScore = 1.1;
+          }
+          
+          const manifestoValues = ['resilience', 'transparency', 'collective', 'community', 'governance'];
+          const projectValues = (project.values || []).map(v => v.toLowerCase());
+          const hasStrongAlignment = projectValues.filter(v => 
+            manifestoValues.some(mv => v.includes(mv))
+          ).length >= 2;
+          
+          if (hasStrongAlignment) {
+            alignmentScore = 1.2;
+          }
+
+          // Record for user
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'user',
+            entity_id: currentUser.id,
+            action_type: 'PROJECT_SUPPORT',
+            magnitude: magnitude,
+            alignment_score: alignmentScore,
+            hub_id: project.hub_id,
+            metadata: {
+              project_id: project.id,
+              project_title: project.title,
+              project_category: project.category,
+              has_manifesto_compliance: project.manifesto_compliance
+            }
+          });
+
+          // Record for project
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'project',
+            entity_id: project.id,
+            action_type: 'PROJECT_SUPPORT',
+            magnitude: magnitude * 0.5,
+            alignment_score: alignmentScore,
+            hub_id: project.hub_id,
+            metadata: {
+              supporter_id: currentUser.id,
+              total_supporters: updatedSupporters.length
+            }
+          });
+
+          // Hub bonus
+          if (project.hub_id) {
+            await base44.functions.invoke('recordResonanceEvent', {
+              entity_type: 'hub',
+              entity_id: project.hub_id,
+              action_type: 'PROJECT_SUPPORT',
+              magnitude: 0.3,
+              alignment_score: alignmentScore,
+              metadata: {
+                project_id: project.id,
+                supporter_id: currentUser.id
+              }
+            });
+          }
+
+          console.log(`✓ Project support resonance recorded`);
+        }
+      } catch (error) {
+        console.error('Failed to record resonance:', error);
+      }
       
       const updatedProject = await Project.update(project.id, {
         ...project, // Include all existing project data
@@ -393,7 +472,9 @@ export default function ProjectDetail({ project, isOpen, onClose, onSupport, onV
                   </div>
                   <div className="bg-slate-900/50 rounded-lg p-4 text-center">
                     <TrendingUp className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                    <div className="text-xl font-bold text-white">{Math.round(project.resonance_level || 0)}/10</div>
+                    <div className="text-xl font-bold text-orange-400">
+                      {project.realResonance ? project.realResonance.toFixed(1) : '0.0'}
+                    </div>
                     <div className="text-sm text-slate-400">Resonance</div>
                   </div>
                   <div className="bg-slate-900/50 rounded-lg p-4 text-center">

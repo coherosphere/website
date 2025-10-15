@@ -1,10 +1,13 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, DailyCheckIn } from '@/api/entities';
+import { base44 } from '@/api/base44Client';
 import { Wind, Frown, Meh, Smile, Laugh, Sparkles, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { ArrowRight } from 'lucide-react';
+import { useCachedData } from '@/components/caching/useCachedData';
 
 const moods = [
   { icon: Frown, label: 'Struggling' },
@@ -20,7 +23,20 @@ export default function MindfulnessCheckIn() {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isLocked, setIsLocked] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
-  const [user, setUser] = useState(null);
+
+  // Use cached data for current user
+  const { data: user } = useCachedData(
+    ['mindfulness', 'currentUser'],
+    async () => {
+      try {
+        return await base44.auth.me();
+      } catch (error) {
+        console.log('User not logged in, using localStorage');
+        return null;
+      }
+    },
+    'learning'
+  );
 
   const updateTimeRemaining = useCallback((timestamp = selectionTimestamp) => {
     if (!timestamp) return;
@@ -38,7 +54,7 @@ export default function MindfulnessCheckIn() {
       
       // Clear from storage
       if (user) {
-        User.updateMyUserData({
+        base44.auth.updateMe({
           daily_mood_selection: null,
           daily_mood_timestamp: null
         });
@@ -76,43 +92,38 @@ export default function MindfulnessCheckIn() {
   }, [updateTimeRemaining]);
 
   const loadMoodSelection = useCallback(async () => {
-    try {
-      // Try to get current user first
-      const currentUser = await User.me();
-      setUser(currentUser);
+    // If user is available, try to load from user profile
+    if (user && user.daily_mood_selection !== null && user.daily_mood_timestamp) {
+      const savedTimestamp = new Date(user.daily_mood_timestamp).getTime();
+      const now = Date.now();
+      const timeDiff = now - savedTimestamp;
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
       
-      // Load from user profile if available
-      if (currentUser && currentUser.daily_mood_selection !== null && currentUser.daily_mood_timestamp) {
-        const savedTimestamp = new Date(currentUser.daily_mood_timestamp).getTime();
-        const now = Date.now();
-        const timeDiff = now - savedTimestamp;
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-        
-        if (timeDiff < TWENTY_FOUR_HOURS) {
-          // Still within 24h window
-          setSelectedMood(currentUser.daily_mood_selection);
-          setSelectionTimestamp(savedTimestamp);
-          setIsLocked(true);
-          updateTimeRemaining(savedTimestamp);
-        } else {
-          // 24h expired, clear old selection
-          await User.updateMyUserData({
-            daily_mood_selection: null,
-            daily_mood_timestamp: null
-          });
-        }
+      if (timeDiff < TWENTY_FOUR_HOURS) {
+        // Still within 24h window
+        setSelectedMood(user.daily_mood_selection);
+        setSelectionTimestamp(savedTimestamp);
+        setIsLocked(true);
+        updateTimeRemaining(savedTimestamp);
+      } else {
+        // 24h expired, clear old selection
+        await base44.auth.updateMe({
+          daily_mood_selection: null,
+          daily_mood_timestamp: null
+        });
       }
-    } catch (error) {
-      // User not logged in or error fetching user, try localStorage
-      console.log('User not logged in or error fetching user, using localStorage', error);
+    } else if (user === null) {
+      // User not logged in, try localStorage
       loadFromLocalStorage();
     }
-  }, [updateTimeRemaining, loadFromLocalStorage]);
+  }, [user, updateTimeRemaining, loadFromLocalStorage]);
 
-  // Load saved mood selection on component mount
+  // Load saved mood selection when user data is available
   useEffect(() => {
-    loadMoodSelection();
-  }, [loadMoodSelection]);
+    if (user !== undefined) {
+      loadMoodSelection();
+    }
+  }, [user, loadMoodSelection]);
 
   // Update timer every minute when locked
   useEffect(() => {
@@ -127,10 +138,58 @@ export default function MindfulnessCheckIn() {
     };
   }, [isLocked, selectionTimestamp, updateTimeRemaining]);
 
+  // Calculate alignment score based on mood
+  const calculateAlignmentScore = (moodIndex) => {
+    if (moodIndex <= 1) return 0.9; // Struggling/Okay - authentic but burdened
+    if (moodIndex === 2) return 1.0; // Good - neutral
+    return 1.1; // Great/Vibrant - amplifying
+  };
+
+  // Calculate current streak
+  const calculateStreak = async (userId) => {
+    try {
+      const checkIns = await base44.entities.DailyCheckIn.filter(
+        { user_id: userId },
+        '-timestamp', // Order by timestamp descending
+        30 // Fetch last 30 days
+      );
+
+      if (checkIns.length === 0) return 0;
+
+      // Map check-ins to unique dates (YYYY-MM-DD format) to handle multiple check-ins on the same day
+      const checkedInDays = new Set();
+      checkIns.forEach(checkIn => {
+        const d = new Date(checkIn.timestamp);
+        // Normalize to UTC date string to avoid timezone issues when comparing days
+        checkedInDays.add(d.toISOString().split('T')[0]); 
+      });
+
+      let streak = 0;
+      let currentDay = new Date();
+      
+      for (let i = 0; i < 30; i++) { // Check for streak up to 30 days back
+        const dayString = currentDay.toISOString().split('T')[0];
+        
+        if (checkedInDays.has(dayString)) {
+          streak++;
+        } else {
+          break; // Streak broken
+        }
+        // Move to the previous day
+        currentDay.setDate(currentDay.getDate() - 1);
+      }
+
+      return streak;
+    } catch (error) {
+      console.error('Error calculating streak:', error);
+      return 0;
+    }
+  };
+
   const handleMoodSelection = async (moodIndex) => {
     if (isLocked) return; // Cannot change if locked
     
-    const now = Date.now();
+    const now = Date.now(); // FIX: Changed from Date.Object() to Date.now()
     const selectedMoodData = moods[moodIndex];
     
     setSelectedMood(moodIndex);
@@ -141,20 +200,59 @@ export default function MindfulnessCheckIn() {
     try {
       // Save to user profile or localStorage (for 24h lock)
       if (user) {
-        await User.updateMyUserData({
+        await base44.auth.updateMe({
           daily_mood_selection: moodIndex,
           daily_mood_timestamp: new Date(now).toISOString()
         });
 
         // Create a permanent record in DailyCheckIn
-        await DailyCheckIn.create({
+        await base44.entities.DailyCheckIn.create({
           user_id: user.id,
           mood_selection: moodIndex,
           mood_label: selectedMoodData.label,
           timestamp: new Date(now).toISOString()
         });
 
-        console.log(`Check-in recorded: ${selectedMoodData.label} for user ${user.id}`);
+        // Calculate streak
+        const currentStreak = await calculateStreak(user.id);
+        const isStreakBonus = currentStreak >= 5; // Example: Streak bonus for 5+ days
+
+        // Calculate alignment score based on mood
+        const alignmentScore = calculateAlignmentScore(moodIndex);
+
+        // Record resonance event
+        await base44.functions.invoke('recordResonanceEvent', {
+          entity_type: 'user',
+          entity_id: user.id,
+          action_type: 'DAILY_CHECKIN_COMPLETED',
+          magnitude: 1.0, // Base magnitude for a check-in
+          alignment_score: alignmentScore,
+          metadata: {
+            mood_index: moodIndex,
+            mood_label: selectedMoodData.label,
+            streak: currentStreak,
+            streak_bonus_applied: isStreakBonus
+          },
+          source: 'ui' // Indicate event originated from user interaction in the UI
+        });
+
+        // If streak bonus, record additional event
+        if (isStreakBonus) {
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'user',
+            entity_id: user.id,
+            action_type: 'DAILY_CHECKIN_STREAK_BONUS', // A distinct action type for bonuses
+            magnitude: 2.0, // Higher magnitude for a bonus
+            alignment_score: 1.1, // Often bonuses are seen as positive alignment
+            metadata: {
+              streak: currentStreak,
+              bonus_type: 'streak_5_days' // Specific bonus type
+            },
+            source: 'system' // Indicate event originated from system logic
+          });
+        }
+
+        console.log(`Check-in recorded: ${selectedMoodData.label} for user ${user.id}${isStreakBonus ? ' (Streak bonus!)' : ''}`);
       } else {
         // Fallback to localStorage if user not logged in
         localStorage.setItem('coherosphere_daily_mood', JSON.stringify({
@@ -164,7 +262,6 @@ export default function MindfulnessCheckIn() {
       }
     } catch (error) {
       console.error('Error saving mood selection:', error);
-      // You might want to show a user-friendly error message here
     }
   };
 
@@ -187,10 +284,15 @@ export default function MindfulnessCheckIn() {
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.5 }}>
         <Card className="bg-slate-800/40 backdrop-blur-sm border-slate-700">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-white">Daily Resonance Check-In</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-white">Daily Resonance Mood</CardTitle>
+              <Link to={createPageUrl('ResonanceCheck')} className="text-orange-400 hover:text-orange-300 transition-colors">
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-400 mb-6">How are you resonating today?</p>
+            <p className="text-slate-400 mb-6">Take a moment to sense where you are in the field.</p>
             <div className="flex justify-around">
               {moods.map((mood, index) => (
                 <motion.button

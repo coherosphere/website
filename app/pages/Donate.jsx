@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bitcoin, Zap, Copy, Check, Heart, Shield, Users, Globe, Eye, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
+import { Bitcoin, Zap, Copy, Check, Heart, Shield, Users, Globe, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,13 +11,16 @@ import { createPageUrl } from '@/utils';
 import { checkApiStatus } from '@/api/functions';
 import { generateQrCode } from '@/api/functions';
 import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { useLoading } from '@/components/loading/LoadingContext';
+import { useCachedData } from '@/components/caching/useCachedData';
+import DonateTransactionList from '@/components/donate/DonateTransactionList';
 
-export default function Donate() {
+const BITCOIN_ADDRESS = "bc1q7davwh4083qrw8dsnazavamul4ngam99zt7nfy";
+
+export default function DonatePage() {
   const [onChainCopied, setOnChainCopied] = useState(false);
   const [lightningCopied, setLightningCopied] = useState(false);
   const [selectedTab, setSelectedTab] = useState('lightning');
-  const [transactions, setTransactions] = useState([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [selectedQRImage, setSelectedQRImage] = useState(null);
   const [selectedQRType, setSelectedQRType] = useState('');
@@ -27,164 +30,132 @@ export default function Donate() {
   const [onChainQR, setOnChainQR] = useState(null);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
-  const onChainAddress = "bc1q7davwh4083qrw8dsnazavamul4ngam99zt7nfy";
   const lightningAddress = "coherosphere@getalby.com";
+
+  const { setLoading } = useLoading();
+
+  // Use cached data for treasury transactions
+  const {
+    data: apiData,
+    isLoading: isLoadingTransactions,
+    error: transactionsError,
+    refetch: refetchTransactions
+  } = useCachedData(
+    ['donate', 'transactions'],
+    checkApiStatus,
+    'donate'
+  );
+
+  // Stable state for transactions
+  const [transactions, setTransactions] = useState([]);
+  const lastTransactionHashRef = React.useRef(null);
+  const hasInitializedRef = React.useRef(false);
+
+  // Sync loading state with global loading context - ONLY on initial load
+  useEffect(() => {
+    setLoading(isLoadingTransactions);
+  }, [isLoadingTransactions, setLoading]);
 
   // Generate QR codes on mount
   useEffect(() => {
     const generateQRCodes = async () => {
       setIsGeneratingQR(true);
       try {
-        // Generate Lightning QR
         const lightningResponse = await generateQrCode({ data: `lightning:${lightningAddress}` });
         if (lightningResponse?.data && lightningResponse.data.qrCodeUrl) {
           setLightningQR(lightningResponse.data.qrCodeUrl);
         }
 
-        // Generate On-Chain QR
-        const onChainResponse = await generateQrCode({ data: `bitcoin:${onChainAddress}` });
+        const onChainResponse = await generateQrCode({ data: `bitcoin:${BITCOIN_ADDRESS}` });
         if (onChainResponse?.data && onChainResponse.data.qrCodeUrl) {
           setOnChainQR(onChainResponse.data.qrCodeUrl);
         }
       } catch (error) {
         console.error('Error generating QR codes:', error);
-        // Optionally set a fallback QR image or error state
       } finally {
         setIsGeneratingQR(false);
       }
     };
 
     generateQRCodes();
-  }, [lightningAddress, onChainAddress]); // Depend on addresses to regenerate if they change (though unlikely here)
+  }, [lightningAddress]); // Removed onChainAddress from dependencies as it's now a global constant
 
-
-  useEffect(() => {
-    console.log('Main useEffect running');
-
-    let timeoutId = null;
-    let isMounted = true;
-
-    const fetchTransactionsWithAutoRefresh = async (isInitialLoad = false) => {
-      console.log('fetchTransactionsWithAutoRefresh called. isInitialLoad:', isInitialLoad);
-      
-      if (!isMounted) return;
-
-      // Nur beim allersten Laden den Refreshing-Status setzen
-      if (isInitialLoad) {
-        setIsRefreshing(true); // Set refreshing status to true at the start of fetch
-      }
-
-      try {
-        // Initial load uses cache, auto-refresh always fetches fresh data
-        const response = await checkApiStatus();
-        console.log('API response received');
-        
-        if (response?.data && isMounted) {
-          // Process Bitcoin transactions
-          const bitcoinTxs = (response.data.bitcoinTransactions || []).map(tx => {
-            let received = 0;
-            let sent = 0;
-
-            tx.vout?.forEach((output) => {
-              if (output.scriptpubkey_address === onChainAddress) {
-                received += output.value;
-              }
-            });
-
-            tx.vin?.forEach((input) => {
-              if (input.prevout && input.prevout.scriptpubkey_address === onChainAddress) {
-                sent += input.prevout.value;
-              }
-            });
-
-            const netAmount = received - sent;
-            return {
-              id: tx.txid,
-              type: 'bitcoin',
-              amount: Math.abs(netAmount),
-              direction: netAmount >= 0 ? 'in' : 'out',
-              timestamp: tx.status.block_time, // This can be null for unconfirmed
-              hash: tx.txid
-            };
-          }).filter(tx => tx.amount > 0);
-
-          // Process Lightning transactions  
-          const lightningTxs = (response.data.lightningTransactions || []).map(tx => ({
-            id: tx.id || tx.payment_hash,
-            type: 'lightning',
-            amount: tx.amount,
-            direction: tx.type === 'incoming' ? 'in' : 'out',
-            timestamp: tx.created_at,
-            hash: tx.id || tx.payment_hash
-          }));
-
-          // Combine and sort by timestamp (newest first). Unconfirmed transactions (timestamp null) will be last.
-          const allTxs = [...bitcoinTxs, ...lightningTxs].sort((a, b) => {
-            if (a.timestamp === b.timestamp) return 0;
-            if (a.timestamp === null) return 1; // a comes after b if a is unconfirmed
-            if (b.timestamp === null) return -1; // b comes after a if b is unconfirmed
-            return b.timestamp - a.timestamp;
-          });
-          console.log(`Combined and sorted: ${allTxs.length} total transactions`);
-          
-          // Only update state if transactions actually changed
-          setTransactions(prevTransactions => {
-            // Compare the last 5 transactions (or fewer if not enough exist)
-            const newLast5 = allTxs.slice(0, 5);
-            const prevLast5 = prevTransactions.slice(0, 5);
-            
-            // Check if they are different
-            const hasChanged = newLast5.length !== prevLast5.length || 
-              newLast5.some((tx, index) => {
-                const prevTx = prevLast5[index];
-                // If prevTx doesn't exist at this index, it means length changed or this is a new tx
-                return !prevTx || 
-                  tx.id !== prevTx.id || 
-                  tx.amount !== prevTx.amount || 
-                  tx.direction !== prevTx.direction ||
-                  tx.timestamp !== prevTx.timestamp;
-              });
-            
-            if (hasChanged) {
-              console.log('Transactions changed, updating screen');
-              return allTxs;
-            } else {
-              console.log('Transactions unchanged, skipping screen update');
-              return prevTransactions;
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-      } finally {
-        if (isMounted) {
-          // Den Refreshing-Status immer auf false setzen
-          setIsRefreshing(false); 
-          
-          // Schedule next refresh 10 seconds after this one completes
-          console.log('Scheduling next refresh in 10 seconds');
-          timeoutId = setTimeout(() => {
-            if (isMounted) {
-              console.log('Auto-refresh timeout triggered');
-              // The next call to fetchTransactionsWithAutoRefresh will set isRefreshing to true again.
-              fetchTransactionsWithAutoRefresh(false); 
-            }
-          }, 10000);
-        }
-      }
-    };
-
-    // Initial load - this will start the recursive cycle
-    fetchTransactionsWithAutoRefresh(true);
+  // Helper to calculate Bitcoin transaction amount and direction
+  const getBitcoinTxAmount = useCallback((tx, address) => {
+    let received = tx.vout?.reduce((sum, output) => 
+        output.scriptpubkey_address === address ? sum + output.value : sum, 0) || 0;
     
-    return () => {
-      console.log('Cleaning up timeout');
-      isMounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, []); // Empty dependency array
+    let sent = tx.vin?.reduce((sum, input) =>
+        input.prevout?.scriptpubkey_address === address ? sum + input.prevout.value : sum, 0) || 0;
+
+    const netAmount = received - sent;
+    return { amount: Math.abs(netAmount), direction: netAmount >= 0 ? 'in' : 'out' };
+  }, []); // Empty dependency array as it only depends on its args
+
+  // Process and update transactions - EXACT SAME PATTERN AS TREASURY
+  useEffect(() => {
+    if (!apiData?.data) {
+      console.log('[Donate] No API data yet');
+      return;
+    }
+
+    const data = apiData.data;
+
+    const onChainTxs = (data.bitcoinTransactions || []).map(tx => {
+      const { amount, direction } = getBitcoinTxAmount(tx, BITCOIN_ADDRESS);
+      return {
+        id: tx.txid,
+        hash: tx.txid,
+        amount,
+        direction,
+        timestamp: tx.status.block_time,
+        type: 'bitcoin'
+      };
+    }).filter(tx => tx.amount > 0);
+
+    const lightningTxs = (data.lightningTransactions || []).map(tx => ({
+      id: tx.id || tx.payment_hash,
+      hash: tx.id || tx.payment_hash,
+      amount: tx.amount,
+      direction: tx.type === 'incoming' ? 'in' : 'out',
+      timestamp: tx.created_at,
+      type: 'lightning'
+    }));
+
+    const allTransactions = [...onChainTxs, ...lightningTxs]
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    // Create a stable hash from transaction IDs and amounts
+    const transactionHash = allTransactions
+      .map(tx => `${tx.id}:${tx.amount}:${tx.timestamp}`)
+      .join('|');
+    
+    // For initial load, always set transactions
+    if (!hasInitializedRef.current && allTransactions.length > 0) {
+      console.log('📊 [Donate] Initial transactions load:', {
+        count: allTransactions.length,
+        hash: transactionHash.substring(0, 50) + '...'
+      });
+      lastTransactionHashRef.current = transactionHash;
+      hasInitializedRef.current = true;
+      setTransactions(allTransactions);
+      return;
+    }
+    
+    // For subsequent updates, only update if hash changed
+    if (hasInitializedRef.current && transactionHash !== lastTransactionHashRef.current) {
+      console.log('📊 [Donate] Transactions changed:', {
+        oldHash: lastTransactionHashRef.current ? lastTransactionHashRef.current.substring(0, 50) + '...' : 'none',
+        newHash: transactionHash.substring(0, 50) + '...',
+        oldCount: transactions.length,
+        newCount: allTransactions.length
+      });
+      lastTransactionHashRef.current = transactionHash;
+      setTransactions(allTransactions);
+    } else if (hasInitializedRef.current) {
+      console.log('[Donate] No changes detected, skipping update');
+    }
+  }, [apiData, getBitcoinTxAmount]);
 
   const handleCopy = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -203,411 +174,320 @@ export default function Donate() {
     setShowQR(true);
   };
 
-  const formatAmount = (sats) => {
-    return new Intl.NumberFormat().format(sats);
-  };
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) {
-      return 'not confirmed';
-    }
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }) + ', ' + date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Filter transactions based on selected tab
-  const getRelevantTransactions = () => {
+  // Memoize relevant transactions to prevent re-renders
+  const relevantTransactions = React.useMemo(() => {
     const filtered = transactions.filter(tx => 
       selectedTab === 'lightning' ? tx.type === 'lightning' : tx.type === 'bitcoin'
     );
-    return filtered.slice(0, 5); // Show only last 5 transactions
-  };
+    return filtered.slice(0, 5);
+  }, [transactions, selectedTab]);
 
-  const TransactionSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center justify-between py-3 px-4 bg-slate-600/40 rounded-lg animate-pulse">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-slate-600 rounded-full"></div>
-            <div>
-              <div className="h-4 w-16 bg-slate-600 rounded mb-1"></div>
-              <div className="h-3 w-24 bg-slate-600 rounded"></div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="h-4 w-12 bg-slate-600 rounded mb-1"></div>
-            <div className="h-3 w-8 bg-slate-600 rounded"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const TransactionList = ({ transactions, type, isRefreshing }) => {
-    const showSkeleton = transactions.length === 0 && isRefreshing;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-6 bg-slate-700/30 rounded-lg p-4"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-white font-medium flex items-center gap-2">
-            {type === 'lightning' ? <Zap className="w-4 h-4 text-yellow-400" /> : <Bitcoin className="w-4 h-4 text-orange-400" />}
-            Recent {type === 'lightning' ? 'Lightning' : 'Bitcoin'} Transactions
-          </h4>
-          {/* Show RefreshCw only if isRefreshing is true */}
-          {isRefreshing && (
-            <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
-          )}
-        </div>
-        
-        {showSkeleton ? (
-          <TransactionSkeleton />
-        ) : transactions.length === 0 ? (
-          <div className="text-slate-400 text-sm text-center py-8">
-            No recent {type === 'lightning' ? 'Lightning' : 'Bitcoin'} transactions found
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <AnimatePresence mode="popLayout">
-              {transactions.map((tx, index) => (
-                <motion.div
-                  key={tx.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  layout
-                  className="flex items-center justify-between py-3 px-4 bg-slate-600/40 rounded-lg hover:bg-slate-600/60 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {tx.direction === 'in' ? (
-                      <ArrowDownCircle className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <ArrowUpCircle className="w-4 h-4 text-red-400" />
-                    )}
-                    <div className="text-left">
-                      <div className="text-white text-sm font-medium text-left">
-                        {tx.direction === 'in' ? 'Received' : 'Sent'}
-                      </div>
-                      <div className="text-slate-400 text-xs text-left">
-                        {formatDate(tx.timestamp)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`font-semibold text-sm ${tx.direction === 'in' ? 'text-green-400' : 'text-red-400'}`}>
-                      {tx.direction === 'in' ? '+' : '-'}{formatAmount(tx.amount)}
-                    </div>
-                    <div className="text-slate-400 text-xs">sats</div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </motion.div>
-    );
-  }
+  const shouldShowSpinner = isLoadingTransactions && !apiData;
 
   return (
     <>
-      <div className="p-4 lg:p-8">
-        {/* Header */}
-        <motion.div
-          className="mb-12"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <div className="flex items-center gap-4 mb-4">
-            <Heart className="w-12 h-12 text-orange-500" />
-            <div>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
-                Participate in the Coherosphere
-              </h1>
-              <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
+      {shouldShowSpinner ? (
+        <>
+          <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+            <div className="text-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+              <div className="text-slate-400 text-lg mt-4">Loading Donations...</div>
             </div>
           </div>
-          <p className="text-lg text-slate-400 max-w-3xl">
-            Your contribution directly funds community-driven projects that align with our <Link to={createPageUrl('Manifesto')} className="text-orange-400 hover:underline">manifesto</Link>. 
-            By donating, you strengthen our collective ability to build a resilient and meaningful future. All funds are managed transparently in the community <Link to={createPageUrl('Treasury')} className="text-orange-400 hover:underline">treasury</Link>.
-          </p>
-        </motion.div>
+          <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+        </>
+      ) : (
+        <div className="p-4 lg:p-8">
+          {/* Header */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <Heart className="w-12 h-12 text-orange-500 flex-shrink-0" />
+              <div>
+                <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+                  Fund the Sphere
+                </h1>
+                <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
+              </div>
+            </div>
+            <p className="text-lg text-slate-400 leading-relaxed max-w-2xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Every sat you contribute resonates through the coherosphere.
+              Together we build a resilient and meaningful future – transparent, decentralized, and aligned with our shared values.
+            </p>
+          </motion.div>
 
-        {/* Two-column layout: Content left (1/3), Donation options right (2/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: Narrative Content */}
-          <div className="lg:col-span-1 space-y-8">
+          {/* Two-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* Why Donate */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Why Support Us?</h2>
-              <p className="text-slate-300 leading-relaxed">
-                Your donation is not charity – it is <span className="text-orange-400 font-semibold">participation</span>. 
-                Every sat flows into projects, hubs, and learning spaces that build resilience and meaning in the age of AI.
-              </p>
-            </motion.div>
-
-            {/* Transparency & Treasury */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Full Transparency</h2>
-              <div className="text-slate-300 leading-relaxed space-y-3 mb-4">
-                <p>Bitcoin on-chain transactions are publicly verifiable on the blockchain.</p>
-                <p>Lightning payments happen off-chain – yet we make them visible: all movements are disclosed in our live Treasury dashboard.</p>
-                <p>This way, every satoshi is accounted for, whether on-chain or Lightning.</p>
-              </div>
-              <Link
-                to={createPageUrl('Treasury')}
-                className="inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 font-medium transition-colors"
+            {/* Left Column: Narrative Content */}
+            <div className="lg:col-span-1 space-y-8">
+              
+              {/* Why Donate */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
               >
-                <Eye className="w-4 h-4" />
-                View Live Treasury
-              </Link>
-            </motion.div>
+                <h2 className="text-xl font-bold text-white mb-4">Why Support Us?</h2>
+                <p className="text-slate-300 leading-relaxed">
+                  Your donation is not charity – it is <span className="text-orange-400 font-semibold">participation</span>. 
+                  Every sat flows into projects, hubs, and learning spaces that build resilience and meaning in the age of AI.
+                </p>
+              </motion.div>
 
-            {/* Values Callout */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Our Values</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Decentralized</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Intelligent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Resilient</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Collective</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Trustless</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Solid</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Progressive</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300 text-sm">Inviting</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Closing Invitation */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/30 rounded-xl p-6"
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Join the Movement</h2>
-              <p className="text-slate-300 leading-relaxed mb-4">
-                Join us. Every sat you contribute resonates through the coherosphere.
-              </p>
-              <div className="flex items-center gap-2 text-orange-400">
-                <Heart className="w-5 h-5" />
-                <span className="text-sm font-medium">Make Your Mark</span>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Column: Donation Options */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              <Tabs 
-                defaultValue="lightning" 
-                className="w-full"
-                onValueChange={(value) => {
-                  console.log('Tab changed to:', value);
-                  setSelectedTab(value);
-                }}
+              {/* Transparency & Treasury */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
               >
-                <TabsList className="grid w-full grid-cols-2 bg-slate-800/80 border border-slate-700 h-14">
-                  <TabsTrigger value="lightning" className="h-12 text-lg data-[state=active]:bg-orange-500/90 data-[state=active]:text-white">
-                    <Zap className="w-5 h-5 mr-2" /> Lightning
-                  </TabsTrigger>
-                  <TabsTrigger value="on-chain" className="h-12 text-lg data-[state=active]:bg-orange-500/90 data-[state=active]:text-white">
-                    <Bitcoin className="w-5 h-5 mr-2" /> On-Chain
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="lightning" className="mt-6">
-                  <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-center">
-                    <CardHeader>
-                      <CardTitle className="text-2xl text-white">Lightning Donation</CardTitle>
-                      <CardDescription className="text-slate-400">
-                        Instant, low-fee payments. Scan with any Lightning-enabled wallet.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col items-center gap-6">
-                      <div 
-                        className="p-4 bg-white rounded-lg w-64 h-64 cursor-pointer hover:ring-4 hover:ring-orange-500/50 transition-all duration-200 flex items-center justify-center"
-                        onClick={() => lightningQR && handleShowQR(lightningQR, "Lightning")}
-                      >
-                        {isGeneratingQR ? (
-                          <CoherosphereNetworkSpinner 
-                            size={100}
-                            lineWidth={2}
-                            dotRadius={6}
-                            interval={1100}
-                            maxConcurrent={4}
-                          />
-                        ) : lightningQR ? (
-                          <img 
-                            src={lightningQR}
-                            alt="Lightning QR Code"
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <div className="text-gray-500">QR Code not available</div>
-                        )}
-                      </div>
-                      <div className="w-full max-w-md">
-                        <div className="flex items-center">
-                          <Input
-                            readOnly
-                            value={lightningAddress}
-                            className="bg-slate-900 border-slate-600 text-slate-300 h-12 text-center"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCopy(lightningAddress, 'lightning')}
-                            className="ml-2 text-slate-400 hover:text-white"
-                          >
-                            {lightningCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
-                          </Button>
-                        </div>
-                        <a href={`lightning:${lightningAddress}`} className="w-full">
-                          <Button size="lg" className="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-lg h-14">
-                            Open in Wallet
-                          </Button>
-                        </a>
-                      </div>
-                      
-                      {/* Lightning Transactions */}
-                      <div className="w-full max-w-md">
-                        <TransactionList 
-                          type="lightning" 
-                          transactions={getRelevantTransactions()}
-                          isRefreshing={isRefreshing}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                <h2 className="text-xl font-bold text-white mb-4">Full Transparency</h2>
+                <div className="text-slate-300 leading-relaxed space-y-3 mb-4">
+                  <p>Bitcoin on-chain transactions are publicly verifiable on the blockchain.</p>
+                  <p>Lightning payments happen off-chain – yet we make them visible: all movements are disclosed in our live Treasury dashboard.</p>
+                  <p>This way, every satoshi is accounted for, whether on-chain or Lightning.</p>
+                </div>
+                <Link
+                  to={createPageUrl('Treasury')}
+                  className="inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 font-medium transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  View Live Treasury
+                </Link>
+              </motion.div>
 
-                <TabsContent value="on-chain" className="mt-6">
-                  <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-center">
-                    <CardHeader>
-                      <CardTitle className="text-2xl text-white">On-Chain Bitcoin Donation</CardTitle>
-                      <CardDescription className="text-slate-400">
-                        For larger contributions directly to our treasury address.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col items-center gap-6">
-                      <div 
-                        className="p-4 bg-white rounded-lg w-64 h-64 cursor-pointer hover:ring-4 hover:ring-orange-500/50 transition-all duration-200 flex items-center justify-center"
-                        onClick={() => onChainQR && handleShowQR(onChainQR, "On-Chain Bitcoin")}
-                      >
-                        {isGeneratingQR ? (
-                          <CoherosphereNetworkSpinner 
-                            size={120}
-                            lineWidth={2}
-                            dotRadius={4}
-                            interval={1100}
-                            maxConcurrent={4}
-                          />
-                        ) : onChainQR ? (
-                          <img 
-                            src={onChainQR}
-                            alt="On-Chain QR Code"
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <div className="text-gray-500">QR Code not available</div>
-                        )}
-                      </div>
-                      <div className="w-full max-w-md">
-                        <div className="flex items-center">
-                          <Input
-                            readOnly
-                            value={onChainAddress}
-                            className="bg-slate-900 border-slate-600 text-slate-300 h-12 text-center text-sm md:text-base"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCopy(onChainAddress, 'on-chain')}
-                            className="ml-2 text-slate-400 hover:text-white"
-                          >
-                            {onChainCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
-                          </Button>
+              {/* Values Callout */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6"
+              >
+                <h2 className="text-xl font-bold text-white mb-4">Our Values</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Decentralized</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Intelligent</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Resilient</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Collective</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Trustless</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Solid</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Progressive</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-orange-400" />
+                    <span className="text-slate-300 text-sm">Inviting</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Closing Invitation */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className="bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/30 rounded-xl p-6"
+              >
+                <h2 className="text-xl font-bold text-white mb-4">Join the Movement</h2>
+                <p className="text-slate-300 leading-relaxed mb-4">
+                  Join us. Every sat you contribute resonates through the coherosphere.
+                </p>
+                <div className="flex items-center gap-2 text-orange-400">
+                  <Heart className="w-5 h-5" />
+                  <span className="text-sm font-medium">Make Your Mark</span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right Column: Donation Options */}
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                <Tabs 
+                  defaultValue="lightning" 
+                  className="w-full"
+                  onValueChange={(value) => setSelectedTab(value)}
+                >
+                  <TabsList className="grid w-full grid-cols-2 bg-slate-800/80 border border-slate-700 h-14">
+                    <TabsTrigger value="lightning" className="h-12 text-lg data-[state=active]:bg-orange-500/90 data-[state=active]:text-white">
+                      <Zap className="w-5 h-5 mr-2" /> Lightning
+                    </TabsTrigger>
+                    <TabsTrigger value="on-chain" className="h-12 text-lg data-[state=active]:bg-orange-500/90 data-[state=active]:text-white">
+                      <Bitcoin className="w-5 h-5 mr-2" /> On-Chain
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="lightning" className="mt-6">
+                    <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-center">
+                      <CardHeader>
+                        <CardTitle className="text-2xl text-white">Lightning Donation</CardTitle>
+                        <CardDescription className="text-slate-400">
+                          Instant, low-fee payments. Scan with any Lightning-enabled wallet.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col items-center gap-6">
+                        <div 
+                          className="p-4 bg-white rounded-lg w-64 h-64 cursor-pointer hover:ring-4 hover:ring-orange-500/50 transition-all duration-200 flex items-center justify-center"
+                          onClick={() => lightningQR && handleShowQR(lightningQR, "Lightning")}
+                        >
+                          {isGeneratingQR ? (
+                            <CoherosphereNetworkSpinner 
+                              size={100}
+                              lineWidth={2}
+                              dotRadius={6}
+                              interval={1100}
+                              maxConcurrent={4}
+                            />
+                          ) : lightningQR ? (
+                            <img 
+                              src={lightningQR}
+                              alt="Lightning QR Code"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-gray-500">QR Code not available</div>
+                          )}
                         </div>
-                        <a href={`bitcoin:${onChainAddress}`} className="w-full">
-                           <Button size="lg" className="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-lg h-14">
-                            Open in Wallet
-                          </Button>
-                        </a>
-                      </div>
-                      
-                      {/* On-Chain Transactions */}
-                      <div className="w-full max-w-md">
-                        <TransactionList 
-                          type="bitcoin" 
-                          transactions={getRelevantTransactions()}
-                          isRefreshing={isRefreshing}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </motion.div>
+                        <div className="w-full max-w-md">
+                          <div className="flex items-center">
+                            <Input
+                              readOnly
+                              value={lightningAddress}
+                              className="bg-slate-900 border-slate-600 text-slate-300 h-12 text-center"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleCopy(lightningAddress, 'lightning')}
+                              className="ml-2 text-slate-400 hover:text-white"
+                            >
+                              {lightningCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                            </Button>
+                          </div>
+                          <a href={`lightning:${lightningAddress}`} className="w-full">
+                            <Button size="lg" className="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-lg h-14">
+                              Open in Wallet
+                            </Button>
+                          </a>
+                        </div>
+                        
+                        {/* Lightning Transactions */}
+                        <div className="w-full max-w-md">
+                          <DonateTransactionList 
+                            type="lightning" 
+                            transactions={relevantTransactions}
+                            isLoading={isLoadingTransactions}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="on-chain" className="mt-6">
+                    <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-center">
+                      <CardHeader>
+                        <CardTitle className="text-2xl text-white">On-Chain Bitcoin Donation</CardTitle>
+                        <CardDescription className="text-slate-400">
+                          For larger contributions directly to our treasury address.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col items-center gap-6">
+                        <div 
+                          className="p-4 bg-white rounded-lg w-64 h-64 cursor-pointer hover:ring-4 hover:ring-orange-500/50 transition-all duration-200 flex items-center justify-center"
+                          onClick={() => onChainQR && handleShowQR(onChainQR, "On-Chain Bitcoin")}
+                        >
+                          {isGeneratingQR ? (
+                            <CoherosphereNetworkSpinner 
+                              size={120}
+                              lineWidth={2}
+                              dotRadius={4}
+                              interval={1100}
+                              maxConcurrent={4}
+                            />
+                          ) : onChainQR ? (
+                            <img 
+                              src={onChainQR}
+                              alt="On-Chain QR Code"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-gray-500">QR Code not available</div>
+                          )}
+                        </div>
+                        <div className="w-full max-w-md">
+                          <div className="flex items-center">
+                            <Input
+                              readOnly
+                              value={BITCOIN_ADDRESS}
+                              className="bg-slate-900 border-slate-600 text-slate-300 h-12 text-center text-sm md:text-base"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleCopy(BITCOIN_ADDRESS, 'on-chain')}
+                              className="ml-2 text-slate-400 hover:text-white"
+                            >
+                              {onChainCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                            </Button>
+                          </div>
+                          <a href={`bitcoin:${BITCOIN_ADDRESS}`} className="w-full">
+                            <Button size="lg" className="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-lg h-14">
+                              Open in Wallet
+                            </Button>
+                          </a>
+                        </div>
+                        
+                        {/* On-Chain Transactions */}
+                        <div className="w-full max-w-md">
+                          <DonateTransactionList 
+                            type="bitcoin" 
+                            transactions={relevantTransactions}
+                            isLoading={isLoadingTransactions}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </motion.div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* QR Code Fullscreen Modal */}
       <AnimatePresence>

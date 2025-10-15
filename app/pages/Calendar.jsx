@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, Eye, EyeOff, Loader2, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, Eye, EyeOff, Loader2, MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -182,7 +182,7 @@ export default function Calendar() {
   const [visibleLaneCounts, setVisibleLaneCounts] = useState({});
   const [eventTextAlignments, setEventTextAlignments] = useState({});
   const [headerTextVisibility, setHeaderTextVisibility] = useState({});
-  const [statusBarTextVisibility, setStatusBarTextVisibility] = useState({});
+  const [statusBarTextVisibility, setStatusBarTextVisibility] = useState({}); // FIXED: Added useState
   
   // Responsive label states
   const [compactLevel, setCompactLevel] = useState(0); // 0 = full, 1 = lanes compact, 2 = views compact, 3 = nav compact
@@ -847,7 +847,7 @@ export default function Calendar() {
 
     // Calculate header and status bar text visibility
     const newHeaderVisibility = {};
-    const newStatusVisibility = {};
+    const newStatusVisibility = {}; 
 
     // For header elements
     if (viewMode === 'hour') {
@@ -1168,393 +1168,409 @@ export default function Calendar() {
           </div>
         </div>
       ) : (
-        <div className="p-4 lg:p-8"> {/* Applied padding to the content container */}
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div className="flex items-center gap-4">
-                <CalendarIcon className="w-12 h-12 text-orange-500 flex-shrink-0" />
-                <div>
-                  <h1 className="text-4xl font-bold text-white leading-tight">
-                    Collective Timeline
-                  </h1>
-                  <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
+        <>
+          {/* Feature Flag Warning Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-orange-500/10 border-b border-orange-500/30 px-6 py-3 flex-shrink-0"
+          >
+            <div className="flex items-center gap-3 max-w-7xl mx-auto">
+              <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0" />
+              <p className="text-sm text-orange-200">
+                <strong>Test Mode (Mock Events):</strong> The data currently consists of automatically generated mock values.
+              </p>
+            </div>
+          </motion.div>
+
+          <div className="p-4 lg:p-8"> {/* Applied padding to the content container */}
+            {/* Header */}
+            <div className="mb-6">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <CalendarIcon className="w-12 h-12 text-orange-500 flex-shrink-0" />
+                  <div>
+                    <h1 className="text-4xl font-bold text-white leading-tight">
+                      Collective Timeline
+                    </h1>
+                    <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
+                  </div>
                 </div>
               </div>
+
+              <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mt-3">
+                A comprehensive timeline view of all community activities, project milestones, and governance decisions.
+              </p>
             </div>
 
-            <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mt-3">
-              A comprehensive timeline view of all community activities, project milestones, and governance decisions.
-            </p>
-          </div>
-
-          <>
-              {/* CONTROLS UND TIMELINE */}
-              <div className="mt-16">
-                {/* Controls */}
-                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
-                  {/* Left Group: View Mode Switcher */}
-                  <div className="w-full lg:w-auto lg:flex-1 flex justify-start">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setViewMode('hour')}
-                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'hour' ? 'active' : ''}`}
-                      >
-                        {getViewModeLabel('hour')}
-                      </button>
-                      <button
-                        onClick={() => setViewMode('day')}
-                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'day' ? 'active' : ''}`}
-                      >
-                        {getViewModeLabel('day')}
-                      </button>
-                      <button
-                        onClick={() => setViewMode('week')}
-                        className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'week' ? 'active' : ''}`}
-                      >
-                        {getViewModeLabel('week')}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Center Group: Navigation Controls */}
-                  <div className="flex-shrink-0 order-first lg:order-none">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => handleNavClick(-1)}
-                        variant="outline"
-                        size="sm"
-                        className="btn-secondary-coherosphere w-14"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        {navLabels[viewMode]}
-                      </Button>
-                      <Button
-                        onClick={scrollToToday}
-                        variant="outline"
-                        size="sm"
-                        className={`btn-secondary-coherosphere ${compactLevel >= 3 ? 'w-10' : 'w-24'}`}
-                      >
-                        {getTodayButtonLabel(viewMode)}
-                      </Button>
-                      <Button
-                        onClick={() => handleNavClick(1)}
-                        variant="outline"
-                        size="sm"
-                        className="btn-secondary-coherosphere w-14"
-                      >
-                        {navLabels[viewMode]}
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Right Group: Lane Filter Chips */}
-                  <div className="w-full lg:w-auto lg:flex-1 flex justify-end overflow-hidden">
-                    <div className="flex flex-nowrap gap-2 justify-end">
-                      {LANES.map(lane => (
+            <>
+                {/* CONTROLS UND TIMELINE */}
+                <div className="mt-16">
+                  {/* Controls */}
+                  <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
+                    {/* Left Group: View Mode Switcher */}
+                    <div className="w-full lg:w-auto lg:flex-1 flex justify-start">
+                      <div className="flex items-center gap-2">
                         <button
-                          key={lane.id}
-                          onClick={() => {
-                            setVisibleLanes(prev =>
-                              prev.includes(lane.id)
-                                ? prev.filter(id => id !== lane.id)
-                                : [...prev, lane.id]
-                            );
-                          }}
-                          className={`filter-chip h-auto justify-between ${compactLevel >= 1 ? 'w-16' : 'w-36'} ${visibleLanes.includes(lane.id) ? 'active' : ''}`}
+                          onClick={() => setViewMode('hour')}
+                          className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'hour' ? 'active' : ''}`}
                         >
-                          <span className="flex-shrink-0 truncate">{getLaneLabel(lane)}</span>
-                          <Badge
-                            variant="secondary"
-                            className={`ml-[3px] transition-colors duration-200 flex-shrink-0 ${compactLevel >= 1 ? 'text-xs px-1' : ''}
-                              ${visibleLanes.includes(lane.id)
-                                ? 'bg-black/20 text-white'
-                                : 'bg-slate-700/50 text-slate-300'
-                              }
-                            `}
-                          >
-                            {Object.keys(visibleLaneCounts).length > 0 ? visibleLaneCounts[lane.id] : laneCounts[lane.id] || 0}
-                          </Badge>
+                          {getViewModeLabel('hour')}
                         </button>
-                      ))}
+                        <button
+                          onClick={() => setViewMode('day')}
+                          className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'day' ? 'active' : ''}`}
+                        >
+                          {getViewModeLabel('day')}
+                        </button>
+                        <button
+                          onClick={() => setViewMode('week')}
+                          className={`filter-chip h-auto ${compactLevel >= 2 ? 'w-12' : 'w-20'} ${viewMode === 'week' ? 'active' : ''}`}
+                        >
+                          {getViewModeLabel('week')}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Center Group: Navigation Controls */}
+                    <div className="flex-shrink-0 order-first lg:order-none">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => handleNavClick(-1)}
+                          variant="outline"
+                          size="sm"
+                          className="btn-secondary-coherosphere w-14"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          {navLabels[viewMode]}
+                        </Button>
+                        <Button
+                          onClick={scrollToToday}
+                          variant="outline"
+                          size="sm"
+                          className={`btn-secondary-coherosphere ${compactLevel >= 3 ? 'w-10' : 'w-24'}`}
+                        >
+                          {getTodayButtonLabel(viewMode)}
+                        </Button>
+                        <Button
+                          onClick={() => handleNavClick(1)}
+                          variant="outline"
+                          size="sm"
+                          className="btn-secondary-coherosphere w-14"
+                        >
+                          {navLabels[viewMode]}
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Right Group: Lane Filter Chips */}
+                    <div className="w-full lg:w-auto lg:flex-1 flex justify-end overflow-hidden">
+                      <div className="flex flex-nowrap gap-2 justify-end">
+                        {LANES.map(lane => (
+                          <button
+                            key={lane.id}
+                            onClick={() => {
+                              setVisibleLanes(prev =>
+                                prev.includes(lane.id)
+                                  ? prev.filter(id => id !== lane.id)
+                                  : [...prev, lane.id]
+                              );
+                            }}
+                            className={`filter-chip h-auto justify-between ${compactLevel >= 1 ? 'w-16' : 'w-36'} ${visibleLanes.includes(lane.id) ? 'active' : ''}`}
+                          >
+                            <span className="flex-shrink-0 truncate">{getLaneLabel(lane)}</span>
+                            <Badge
+                              variant="secondary"
+                              className={`ml-[3px] transition-colors duration-200 flex-shrink-0 ${compactLevel >= 1 ? 'text-xs px-1' : ''}
+                                ${visibleLanes.includes(lane.id)
+                                  ? 'bg-black/20 text-white'
+                                  : 'bg-slate-700/50 text-slate-300'
+                                }
+                              `}
+                            >
+                              {Object.keys(visibleLaneCounts).length > 0 ? visibleLaneCounts[lane.id] : laneCounts[lane.id] || 0}
+                            </Badge>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* TIMELINE VIEWPORT */}
-                <div className="relative min-w-0 bg-slate-800/30 backdrop-blur-sm border border-slate-700 rounded-xl overflow-hidden">
-                  {/* Loading indicator for dynamic loading (kept as is, it's a small overlay) */}
-                  {isLoadingMore && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-2 text-sm text-slate-300 flex items-center gap-2 z-30"
+                  {/* TIMELINE VIEWPORT */}
+                  <div className="relative min-w-0 bg-slate-800/30 backdrop-blur-sm border border-slate-700 rounded-xl overflow-hidden">
+                    {/* Loading indicator for dynamic loading (kept as is, it's a small overlay) */}
+                    {isLoadingMore && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-2 text-sm text-slate-300 flex items-center gap-2 z-30"
+                      >
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading more events...
+                      </motion.div>
+                    )}
+                    
+                    {/* Orange Viewport Borders */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
+                    <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
+                    
+                    <div
+                      ref={timelineViewportRef}
+                      className="overflow-x-auto overflow-y-hidden scrollbar-none"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading more events...
-                    </motion.div>
-                  )}
-                  
-                  {/* Orange Viewport Borders */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
-                  <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-orange-500 z-20 pointer-events-none" />
-                  
-                  <div
-                    ref={timelineViewportRef}
-                    className="overflow-x-auto overflow-y-hidden scrollbar-none"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                  >
-                    <div ref={timelineContentRef} className="relative" style={{
-                      width: `${getTimelineWidth()}px`
-                    }}>
-                      {/* Sticky Header */}
-                      <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 h-[60px]">
-                        {viewMode === 'hour' ? (
-                          <div className="flex absolute top-0 left-0 h-[60px]">
-                            {allDays.map((dayDate) => (
-                              <React.Fragment key={`day-hours-fragment-${dayDate.toString()}`}>
-                                {Array.from({ length: 24 }).map((_, hourIndex) => {
-                                  const hourDate = addHours(dayDate, hourIndex);
-                                  const isCurrentHour = isSameHour(hourDate, today);
-                                  const isStartOfDay = hourIndex === 0;
-                                  const isTextVisible = headerTextVisibility[hourDate.toString()];
+                      <div ref={timelineContentRef} className="relative" style={{
+                        width: `${getTimelineWidth()}px`
+                      }}>
+                        {/* Sticky Header */}
+                        <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 h-[60px]">
+                          {viewMode === 'hour' ? (
+                            <div className="flex absolute top-0 left-0 h-[60px]">
+                              {allDays.map((dayDate) => (
+                                <React.Fragment key={`day-hours-fragment-${dayDate.toString()}`}>
+                                  {Array.from({ length: 24 }).map((_, hourIndex) => {
+                                    const hourDate = addHours(dayDate, hourIndex);
+                                    const isCurrentHour = isSameHour(hourDate, today);
+                                    const isStartOfDay = hourIndex === 0;
+                                    const isTextVisible = headerTextVisibility[hourDate.toString()];
 
-                                  return (
-                                    <div
-                                      key={hourDate.toString()}
-                                      ref={isCurrentHour ? todayRef : null}
-                                      className={`inline-flex flex-col items-center justify-center h-[60px] relative
-                                        ${isCurrentHour ? 'bg-orange-500/10' : ''}`}
-                                      style={{ width: `${HOUR_WIDTH}px` }}
-                                    >
-                                      {isStartOfDay && isTextVisible && (
-                                        <div className={`text-xs font-bold absolute -top-0.5 left-1 translate-y-[-100%] ${isSameDay(dayDate, today) ? 'text-orange-400' : 'text-slate-400'}`}>
-                                          {format(dayDate, 'MMM d')}
+                                    return (
+                                      <div
+                                        key={hourDate.toString()}
+                                        ref={isCurrentHour ? todayRef : null}
+                                        className={`inline-flex flex-col items-center justify-center h-[60px] relative
+                                          ${isCurrentHour ? 'bg-orange-500/10' : ''}`}
+                                        style={{ width: `${HOUR_WIDTH}px` }}
+                                      >
+                                        {isStartOfDay && isTextVisible && (
+                                          <div className={`text-xs font-bold absolute -top-0.5 left-1 translate-y-[-100%] ${isSameDay(dayDate, today) ? 'text-orange-400' : 'text-slate-400'}`}>
+                                            {format(dayDate, 'MMM d')}
+                                          </div>
+                                        )}
+                                        {isTextVisible && (
+                                          <>
+                                            <div className={`text-xs font-medium ${isCurrentHour ? 'text-orange-400' : 'text-slate-400'}`}>
+                                              {format(hourDate, 'HH:mm')}
+                                            </div>
+                                            <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
+                                              hrs
+                                            </div>
+                                            <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
+                                              {format(hourDate, 'EEE')}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          ) : viewMode === 'day' ? (
+                            <div className="flex absolute top-0 left-0 h-[60px]">
+                              {allDays.map((dayDate) => {
+                                const isTodayDay = isSameDay(dayDate, today);
+                                const isTextVisible = headerTextVisibility[dayDate.toString()];
+
+                                return (
+                                  <div
+                                    key={dayDate.toString()}
+                                    ref={isTodayDay ? todayRef : null}
+                                    className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
+                                      isTodayDay ? 'bg-orange-500/10' : ''
+                                    }`}
+                                    style={{ width: `${DAY_WIDTH}px` }}
+                                  >
+                                    {isTextVisible && (
+                                      <>
+                                        <div className={`text-xs font-medium ${isTodayDay ? 'text-orange-400' : 'text-slate-400'}`}>
+                                          {format(dayDate, 'EEE')}
                                         </div>
-                                      )}
-                                      {isTextVisible && (
-                                        <>
-                                          <div className={`text-xs font-medium ${isCurrentHour ? 'text-orange-400' : 'text-slate-400'}`}>
-                                            {format(hourDate, 'HH:mm')}
-                                          </div>
-                                          <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
-                                            hrs
-                                          </div>
-                                          <div className={`text-xs ${isCurrentHour ? 'text-orange-400' : 'text-slate-500'}`}>
-                                            {format(hourDate, 'EEE')}
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        ) : viewMode === 'day' ? (
-                          <div className="flex absolute top-0 left-0 h-[60px]">
-                            {allDays.map((dayDate) => {
-                              const isTodayDay = isSameDay(dayDate, today);
-                              const isTextVisible = headerTextVisibility[dayDate.toString()];
+                                        <div className={`text-sm font-bold ${isTodayDay ? 'text-orange-400' : 'text-white'}`}>
+                                          {format(dayDate, 'd')}
+                                        </div>
+                                        <div className={`text-xs ${isTodayDay ? 'text-orange-400' : 'text-slate-500'}`}>
+                                          {format(dayDate, 'MMM')}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex absolute top-0 left-0 h-[60px]">
+                              {weekData.map((week) => {
+                                const weekWidth = week.daysInRange * WEEK_DAY_WIDTH;
+                                const isTextVisible = headerTextVisibility[week.startDate.toString()];
 
-                              return (
+                                return (
+                                  <div
+                                    key={week.startDate.toString()}
+                                    ref={week.isCurrentWeek ? todayRef : null}
+                                    className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
+                                      week.isCurrentWeek ? 'bg-orange-500/10' : ''
+                                    }`}
+                                    style={{ width: `${weekWidth}px` }}
+                                  >
+                                    {isTextVisible && (
+                                      <>
+                                        <div className={`text-xs font-medium ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-400'}`}>
+                                          Week
+                                        </div>
+                                        <div className={`text-sm font-bold ${week.isCurrentWeek ? 'text-orange-400' : 'text-white'}`}>
+                                          {week.weekNumber}
+                                        </div>
+                                        <div className={`text-xs ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-500'}`}>
+                                          {week.year}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Today line */}
+                        <div
+                          className="absolute top-0 bottom-0 w-px bg-orange-500/50 pointer-events-none z-10"
+                          style={{
+                            left: `${
+                              viewMode === 'hour'
+                                ? differenceInHours(today, effectiveDateRange.minDate) * HOUR_WIDTH
+                                : differenceInDays(startOfDay(today), effectiveDateRange.minDate) * (viewMode === 'day' ? DAY_WIDTH : WEEK_DAY_WIDTH)
+                            }px`
+                          }}
+                        />
+
+                        {/* Swimlanes */}
+                        <div className="relative pt-2 pb-4">
+                          {separatorLines.map((line, index) => (
+                            <div
+                              key={`separator-${index}`}
+                              className={`absolute top-0 bottom-0 w-px pointer-events-none z-[1] ${
+                                line.isMajor ? 'bg-slate-600/70' : 'bg-slate-600/30'
+                              }`}
+                              style={{ left: `${line.left}px` }}
+                            />
+                          ))}
+
+                          {LANES.map(lane => {
+                            if (!visibleLanes.includes(lane.id)) return null;
+
+                            const laneHeightValue = laneItems.heights[lane.id];
+
+                            return (
+                              <div key={lane.id} className="relative mb-2">
                                 <div
-                                  key={dayDate.toString()}
-                                  ref={isTodayDay ? todayRef : null}
-                                  className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
-                                    isTodayDay ? 'bg-orange-500/10' : ''
-                                  }`}
-                                  style={{ width: `${DAY_WIDTH}px` }}
+                                  className={`relative ${lane.color} rounded-lg`}
+                                  style={{ height: `${laneHeightValue}px` }}
                                 >
-                                  {isTextVisible && (
-                                    <>
-                                      <div className={`text-xs font-medium ${isTodayDay ? 'text-orange-400' : 'text-slate-400'}`}>
-                                        {format(dayDate, 'EEE')}
-                                      </div>
-                                      <div className={`text-sm font-bold ${isTodayDay ? 'text-orange-400' : 'text-white'}`}>
-                                        {format(dayDate, 'd')}
-                                      </div>
-                                      <div className={`text-xs ${isTodayDay ? 'text-orange-400' : 'text-slate-500'}`}>
-                                        {format(dayDate, 'MMM')}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="flex absolute top-0 left-0 h-[60px]">
-                            {weekData.map((week) => {
-                              const weekWidth = week.daysInRange * WEEK_DAY_WIDTH;
-                              const isTextVisible = headerTextVisibility[week.startDate.toString()];
+                                  <div className="sticky left-8 top-2 z-10 pointer-events-none inline-block">
+                                    <span className="text-xs font-bold text-white tracking-wider uppercase">
+                                      {lane.label}
+                                    </span>
+                                  </div>
 
-                              return (
-                                <div
-                                  key={week.startDate.toString()}
-                                  ref={week.isCurrentWeek ? todayRef : null}
-                                  className={`flex-shrink-0 flex flex-col items-center justify-center h-[60px] ${
-                                    week.isCurrentWeek ? 'bg-orange-500/10' : ''
-                                  }`}
-                                  style={{ width: `${weekWidth}px` }}
-                                >
-                                  {isTextVisible && (
-                                    <>
-                                      <div className={`text-xs font-medium ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-400'}`}>
-                                        Week
-                                      </div>
-                                      <div className={`text-sm font-bold ${week.isCurrentWeek ? 'text-orange-400' : 'text-white'}`}>
-                                        {week.weekNumber}
-                                      </div>
-                                      <div className={`text-xs ${week.isCurrentWeek ? 'text-orange-400' : 'text-slate-500'}`}>
-                                        {week.year}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Today line */}
-                      <div
-                        className="absolute top-0 bottom-0 w-px bg-orange-500/50 pointer-events-none z-10"
-                        style={{
-                          left: `${
-                            viewMode === 'hour'
-                              ? differenceInHours(today, effectiveDateRange.minDate) * HOUR_WIDTH
-                              : differenceInDays(startOfDay(today), effectiveDateRange.minDate) * (viewMode === 'day' ? DAY_WIDTH : WEEK_DAY_WIDTH)
-                          }px`
-                        }}
-                      />
-
-                      {/* Swimlanes */}
-                      <div className="relative pt-2 pb-4">
-                        {separatorLines.map((line, index) => (
-                          <div
-                            key={`separator-${index}`}
-                            className={`absolute top-0 bottom-0 w-px pointer-events-none z-[1] ${
-                              line.isMajor ? 'bg-slate-600/70' : 'bg-slate-600/30'
-                            }`}
-                            style={{ left: `${line.left}px` }}
-                          />
-                        ))}
-
-                        {LANES.map(lane => {
-                          if (!visibleLanes.includes(lane.id)) return null;
-
-                          const laneHeightValue = laneItems.heights[lane.id];
-
-                          return (
-                            <div key={lane.id} className="relative mb-2">
-                              <div
-                                className={`relative ${lane.color} rounded-lg`}
-                                style={{ height: `${laneHeightValue}px` }}
-                              >
-                                <div className="sticky left-8 top-2 z-10 pointer-events-none inline-block">
-                                  <span className="text-xs font-bold text-white tracking-wider uppercase">
-                                    {lane.label}
-                                  </span>
-                                </div>
-
-                                <div className="absolute inset-0 overflow-hidden">
-                                  <div className="relative h-full">
-                                    {(laneItems.items[lane.id] || []).map((item) => {
-                                      const shouldShowText = window._eventTextVisibility?.[item.id] ?? true; 
-                                      const textStyle = eventTextAlignments[item.id] || { left: '0px', width: '0px' };
-                                      
-                                      return (
-                                        <motion.div
-                                          key={item.id}
-                                          className="absolute cursor-pointer z-[2]"
-                                          style={{
-                                            left: `${item.left}px`,
-                                            width: `${Math.max(2, item.width)}px`,
-                                            top: `${item.top}px`,
-                                            height: `${ITEM_HEIGHT}px`
-                                          }}
-                                          onClick={() => handleItemClick(item)}
-                                          onMouseEnter={(e) => {
-                                            setHoveredItem(item);
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            setTooltipPosition({ 
-                                              x: e.clientX, 
-                                              y: rect.bottom + 8 
-                                            });
-                                          }}
-                                          onMouseMove={(e) => {
-                                            if (hoveredItem && hoveredItem.id === item.id) {
+                                  <div className="absolute inset-0 overflow-hidden">
+                                    <div className="relative h-full">
+                                      {(laneItems.items[lane.id] || []).map((item) => {
+                                        const shouldShowText = window._eventTextVisibility?.[item.id] ?? true; 
+                                        const textStyle = eventTextAlignments[item.id] || { left: '0px', width: '0px' };
+                                        
+                                        return (
+                                          <motion.div
+                                            key={item.id}
+                                            className="absolute cursor-pointer z-[2]"
+                                            style={{
+                                              left: `${item.left}px`,
+                                              width: `${Math.max(2, item.width)}px`,
+                                              top: `${item.top}px`,
+                                              height: `${ITEM_HEIGHT}px`
+                                            }}
+                                            onClick={() => handleItemClick(item)}
+                                            onMouseEnter={(e) => {
+                                              setHoveredItem(item);
                                               const rect = e.currentTarget.getBoundingClientRect();
                                               setTooltipPosition({ 
                                                 x: e.clientX, 
                                                 y: rect.bottom + 8 
                                               });
-                                            }
-                                          }}
-                                          onMouseLeave={() => {
-                                            setHoveredItem(null);
-                                          }}
-                                        >
-                                          <div className={`relative h-full rounded py-1 text-xs font-medium text-white transition-all duration-200 ${
-                                            lane.id === 'events'
-                                              ? 'bg-orange-500/80 hover:bg-orange-500/95'
-                                              : lane.id === 'learning-circles'
-                                              ? 'bg-blue-500/70 hover:bg-blue-500/85'
-                                              : lane.id === 'project-deadlines'
-                                              ? 'bg-slate-600/70 hover:bg-slate-600/85'
-                                              : 'bg-indigo-500/70 hover:bg-indigo-500/85'
-                                          }`}>
-                                            {shouldShowText && (
-                                              <span 
-                                                className="absolute inset-0 px-2 flex items-center justify-center"
-                                                style={{
-                                                  left: textStyle.left, 
-                                                  width: textStyle.width, 
-                                                }}
-                                              >
-                                                <span className="truncate">{item.title}</span>
-                                              </span>
-                                            )}
-                                            
-                                            {/* The status badge is now positioned absolutely to the right */}
-                                            {item.status && shouldShowText && viewMode !== 'week' && viewMode !== 'hour' && (
-                                              <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0 h-4 whitespace-nowrap bg-black/20 text-white z-10">
-                                                {item.status}
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        </motion.div>
-                                      );
-                                    })}
+                                            }}
+                                            onMouseMove={(e) => {
+                                              if (hoveredItem && hoveredItem.id === item.id) {
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setTooltipPosition({ 
+                                                  x: e.clientX, 
+                                                  y: rect.bottom + 8 
+                                                });
+                                              }
+                                            }}
+                                            onMouseLeave={() => {
+                                              setHoveredItem(null);
+                                            }}
+                                          >
+                                            <div className={`relative h-full rounded py-1 text-xs font-medium text-white transition-all duration-200 ${
+                                              lane.id === 'events'
+                                                ? 'bg-orange-500/80 hover:bg-orange-500/95'
+                                                : lane.id === 'learning-circles'
+                                                ? 'bg-blue-500/70 hover:bg-blue-500/85'
+                                                : lane.id === 'project-deadlines'
+                                                ? 'bg-slate-600/70 hover:bg-slate-600/85'
+                                                : 'bg-indigo-500/70 hover:bg-indigo-500/85'
+                                            }`}>
+                                              {shouldShowText && (
+                                                <span 
+                                                  className="absolute inset-0 px-2 flex items-center justify-center"
+                                                  style={{
+                                                    left: textStyle.left, 
+                                                    width: textStyle.width, 
+                                                  }}
+                                                >
+                                                  <span className="truncate">{item.title}</span>
+                                                </span>
+                                              )}
+                                              
+                                              {/* The status badge is now positioned absolutely to the right */}
+                                              {item.status && shouldShowText && viewMode !== 'week' && viewMode !== 'hour' && (
+                                                <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-1 py-0 h-4 whitespace-nowrap bg-black/20 text-white z-10">
+                                                  {item.status}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </motion.div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
 
-                        {/* Status Bar */}
-                        <div className="relative mt-2">
-                          <div className="bg-slate-800 rounded-lg h-[32px] relative">
-                            <div className="absolute inset-0 overflow-hidden">
-                              <div className="relative h-full">
-                                {timeSlotCounts.map((slot, index) => (
-                                  <div
-                                    key={`status-${index}`}
-                                    className="absolute flex items-center justify-center text-xs font-medium text-white"
-                                    style={{
-                                      left: `${slot.left}px`,
-                                      width: `${slot.width}px`,
-                                      height: '32px',
-                                      top: '0px'
-                                    }}
-                                  >
-                                    {statusBarTextVisibility[index] && slot.count > 0 && slot.count}
-                                  </div>
-                                ))}
+                          {/* Status Bar */}
+                          <div className="relative mt-2">
+                            <div className="bg-slate-800 rounded-lg h-[32px] relative">
+                              <div className="absolute inset-0 overflow-hidden">
+                                <div className="relative h-full">
+                                  {timeSlotCounts.map((slot, index) => (
+                                    <div
+                                      key={`status-${index}`}
+                                      className="absolute flex items-center justify-center text-xs font-medium text-white"
+                                      style={{
+                                        left: `${slot.left}px`,
+                                        width: `${slot.width}px`,
+                                        height: '32px',
+                                        top: '0px'
+                                      }}
+                                    >
+                                      {statusBarTextVisibility[index] && slot.count > 0 && slot.count}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1562,39 +1578,39 @@ export default function Calendar() {
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Keyboard Shortcuts Legend */}
-                <motion.div 
-                    className="mt-4 flex justify-center flex-wrap gap-x-6 gap-y-2 text-xs"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.5 }}
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">H / D / W</span>
-                        <span className="text-white">View</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">T</span>
-                        <span className="text-white">Today</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">B / F</span>
-                        <span className="text-white">Navigate</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">← / →</span>
-                        <span className="text-white">Scroll</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">E / L / P / G</span>
-                        <span className="text-white">Toggle Lanes</span>
-                    </div>
-                </motion.div>
-              </div>
-          </>
-        </div>
+                  {/* Keyboard Shortcuts Legend */}
+                  <motion.div 
+                      className="mt-4 flex justify-center flex-wrap gap-x-6 gap-y-2 text-xs"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                      <div className="flex items-center gap-2">
+                          <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">H / D / W</span>
+                          <span className="text-white">View</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">T</span>
+                          <span className="text-white">Today</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">B / F</span>
+                          <span className="text-white">Navigate</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">← / →</span>
+                          <span className="text-white">Scroll</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <span className="bg-slate-700/80 text-white font-mono rounded px-1.5 py-0.5 border border-slate-600/80">E / L / P / G</span>
+                          <span className="text-white">Toggle Lanes</span>
+                      </div>
+                  </motion.div>
+                </div>
+            </>
+          </div>
+        </>
       )}
       
       {/* Custom Tooltip */}

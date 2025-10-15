@@ -7,11 +7,13 @@ import { Project, User } from '@/api/entities';
 import { ArrowLeft, Lightbulb, FileText, Bitcoin, Send, CheckCircle, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 
-import ProjectFormBasics from '@/components/projects/ProjectFormBasics';
-import ProjectFormDetails from '@/components/projects/ProjectFormDetails';
-import ProjectFormReview from '@/components/projects/ProjectFormReview';
-import ProjectPreview from '@/components/projects/ProjectPreview';
+import ProjectFormBasics from '../components/projects/ProjectFormBasics';
+import ProjectFormDetails from '../components/projects/ProjectFormDetails';
+import ProjectFormReview from '../components/projects/ProjectFormReview';
+import ProjectPreview from '../components/projects/ProjectPreview';
+import CoherosphereNetworkSpinner from '../components/spinners/CoherosphereNetworkSpinner';
 
 const STEPS = [
   { id: 1, title: 'Basics', icon: FileText },
@@ -35,6 +37,9 @@ export default function CreateProject() {
   const [projectData, setProjectData] = useState({
     title: '',
     description: '',
+    goal: '',
+    manifesto_compliance: false,
+    community_commitment: false, // Added: Community-Commitment checkbox
     category: 'community',
     hub_id: null,
     funding_needed: 100000,
@@ -55,6 +60,9 @@ export default function CreateProject() {
             setProjectData({
               ...existingProject,
               funding_needed: existingProject.funding_needed || 0,
+              goal: existingProject.goal || '', // ensure goal is initialized
+              manifesto_compliance: existingProject.manifesto_compliance || false, // ensure compliance is initialized
+              community_commitment: existingProject.community_commitment || false, // Added: ensure community commitment is initialized
             });
           } else {
             console.error('Project not found or user not authorized to edit.');
@@ -80,7 +88,11 @@ export default function CreateProject() {
   const isStepValid = (step) => {
     switch (step) {
       case 1:
-        return projectData.title.length > 3 && projectData.description.length >= 10;
+        return projectData.title.length > 3 && 
+               projectData.description.length >= 50 && // Changed: Min length 10 to 50
+               projectData.goal.length >= 40 &&       // Changed: Min length 10 to 40
+               projectData.manifesto_compliance === true &&
+               projectData.community_commitment === true; // Added: Community-Commitment validation
       case 2:
         return projectData.hub_id && projectData.funding_needed >= 0;
       case 3:
@@ -117,6 +129,61 @@ export default function CreateProject() {
         resultProject = await Project.update(projectId, dataToSave);
       } else {
         resultProject = await Project.create(dataToSave);
+        
+        // Record resonance event for NEW project creation
+        try {
+          // Record for the creator (User entity)
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'user',
+            entity_id: currentUser.id,
+            action_type: 'PROJECT_CREATED',
+            magnitude: 4.0,
+            alignment_score: 1.0, // Perfect alignment for creating projects
+            hub_id: projectData.hub_id,
+            metadata: {
+              project_id: resultProject.id,
+              project_title: resultProject.title,
+              category: resultProject.category,
+              funding_needed: resultProject.funding_needed
+            }
+          });
+
+          // Record for the project itself
+          await base44.functions.invoke('recordResonanceEvent', {
+            entity_type: 'project',
+            entity_id: resultProject.id,
+            action_type: 'PROJECT_CREATED',
+            magnitude: 4.0,
+            alignment_score: 1.0,
+            hub_id: projectData.hub_id,
+            metadata: {
+              creator_id: currentUser.id,
+              category: resultProject.category,
+              title: resultProject.title
+            }
+          });
+
+          // If project is assigned to a hub, give the hub a bonus
+          if (projectData.hub_id) {
+            await base44.functions.invoke('recordResonanceEvent', {
+              entity_type: 'hub',
+              entity_id: projectData.hub_id,
+              action_type: 'PROJECT_CREATED',
+              magnitude: 1.0,
+              alignment_score: 1.0,
+              metadata: {
+                project_id: resultProject.id,
+                project_title: resultProject.title,
+                creator_id: currentUser.id
+              }
+            });
+          }
+
+          console.log('✓ Project creation resonance events recorded');
+        } catch (error) {
+          console.error('Failed to record resonance event:', error);
+          // Don't fail the publish if resonance recording fails
+        }
       }
 
       setPublishedProject(resultProject);
@@ -139,13 +206,24 @@ export default function CreateProject() {
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center">
-        <motion.div
-          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
+      <>
+        {/* Fixed Overlay Spinner */}
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center">
+                 <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        {/* Virtual placeholder */}
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
     );
   }
   
@@ -189,36 +267,81 @@ export default function CreateProject() {
     <div className="p-4 lg:p-8">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <Lightbulb className="w-12 h-12 text-orange-500 flex-shrink-0" />
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
               {isEditMode ? 'Edit Project' : 'Start a Project'}
             </h1>
             <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
           </div>
         </div>
+        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          Turn ideas into collective action — projects that resonate.
+        </p>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
-            {STEPS.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors flex-shrink-0 ${
-                  currentStep === step.id ? 'bg-orange-500 text-white' :
-                  currentStep > step.id ? 'bg-green-500 text-white' :
-                  'bg-slate-700 text-slate-400'
-                }`}>
-                  {currentStep > step.id ? '✓' : <step.icon className="w-4 h-4" />}
+        {/* Step Indicator - Desktop */}
+        <div className="hidden lg:flex justify-center mt-6">
+          <div className="flex items-center space-x-4 bg-slate-800/30 backdrop-blur-sm rounded-full px-6 py-3">
+            {STEPS.map((step, index) => {
+              const StepIcon = step.icon;
+              const isActive = currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+              
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${
+                    isActive ? 'bg-orange-500 text-white' : 
+                    isCompleted ? 'bg-green-500 text-white' : 
+                    'bg-slate-700 text-slate-400'
+                  }`}>
+                    {isCompleted ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <StepIcon className="w-5 h-5" />
+                    )}
+                  </div>
+                  <span className={`ml-2 text-sm font-medium transition-colors ${
+                    isActive ? 'text-orange-400' : 
+                    isCompleted ? 'text-green-400' : 
+                    'text-slate-500'
+                  }`}>
+                    {step.title}
+                  </span>
+                  {index < STEPS.length - 1 && (
+                    <div className={`w-12 h-px mx-4 transition-colors ${
+                      isCompleted ? 'bg-green-400' : 'bg-slate-600'
+                    }`} />
+                  )}
                 </div>
-                {index < STEPS.length - 1 && (
-                  <div className={`w-6 h-0.5 transition-colors flex-shrink-0 ${
-                    currentStep > step.id ? 'bg-green-500' : 'bg-slate-600'
-                  }`} />
-                )}
-              </React.Fragment>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Step Indicator - Mobile */}
+        <div className="lg:hidden flex flex-col gap-3 mt-6">
+          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+            {STEPS.map((step, index) => {
+              const isActive = currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+              
+              return (
+                <React.Fragment key={step.id}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors flex-shrink-0 ${
+                    isActive ? 'bg-orange-500 text-white' :
+                    isCompleted ? 'bg-green-500' :
+                    'bg-slate-700 text-slate-400'
+                  }`}>
+                    {isCompleted ? <CheckCircle className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
+                  </div>
+                  {index < STEPS.length - 1 && (
+                    <div className={`w-6 h-0.5 transition-colors flex-shrink-0 ${
+                      isCompleted ? 'bg-green-500' : 'bg-slate-600'
+                    }`} />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
           <div className="text-center">
             <span className="text-sm text-slate-400">
@@ -237,20 +360,31 @@ export default function CreateProject() {
           <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
             <CardContent className="p-6">
               {renderStepContent()}
-              <div className="flex justify-between pt-6 border-t border-slate-700 mt-8">
-                <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1} className="btn-secondary-coherosphere">
-                  Previous
-                </Button>
-                {currentStep < STEPS.length ? (
-                  <Button onClick={handleNext} disabled={!isStepValid(currentStep)} className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold">
-                    Next
-                  </Button>
-                ) : (
-                  <Button onClick={handlePublish} disabled={isPublishing || !isStepValid(1) || !isStepValid(2)} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold">
-                    <Send className="w-4 h-4 mr-2" />
-                    {isPublishing ? 'Publishing...' : (isEditMode ? 'Update Project' : 'Publish Project')}
-                  </Button>
-                )}
+              <div className="flex justify-between items-center pt-6 border-t border-slate-700 mt-8">
+                <div> 
+                   {currentStep > 1 && (
+                    <Button 
+                        variant="outline" 
+                        onClick={handlePrevious} 
+                        className="btn-secondary-coherosphere"
+                    >
+                        Previous
+                    </Button>
+                   )}
+                </div>
+                
+                <div>
+                    {currentStep < STEPS.length ? (
+                      <Button onClick={handleNext} disabled={!isStepValid(currentStep)} className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold">
+                        Next: {STEPS[currentStep].title}
+                      </Button>
+                    ) : (
+                      <Button onClick={handlePublish} disabled={isPublishing || !isStepValid(1) || !isStepValid(2)} className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold">
+                        <Send className="w-4 h-4 mr-2" />
+                        {isPublishing ? 'Publishing...' : (isEditMode ? 'Update Project' : 'Publish Project')}
+                      </Button>
+                    )}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -1,19 +1,22 @@
-
 import React, { useState, useEffect } from "react";
 import { Hub, Project, Event, User } from "@/api/entities";
 import { motion } from "framer-motion";
-import { MapPin, Users, Lightbulb, Calendar, Plus, Zap, UserCircle, AlertTriangle, Bitcoin } from "lucide-react";
+import { MapPin, Users, Lightbulb, Calendar, Plus, Zap, UserCircle, AlertTriangle, Bitcoin, ArrowLeft, Globe2, Activity, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { base44 } from '@/api/base44Client';
 
 import ProjectCard from "@/components/projects/ProjectCard";
 import ProjectDetail from "@/components/projects/ProjectDetail";
 import EventCard from "@/components/hub/EventCard";
 import MemberCard from "@/components/hub/MemberCard";
 import EventDetail from "@/components/hub/EventDetail";
+import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { useLoading } from '@/components/loading/LoadingContext';
+import { useCachedData } from '@/components/caching/useCachedData';
 
 // Mock data for members as we can't insert into User entity
 const mockMembers = [
@@ -26,103 +29,136 @@ const mockMembers = [
 ];
 
 export default function HubPage() {
-  const [hub, setHub] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [members, setMembers] = useState(mockMembers);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('members');
+  const [isExternalHub, setIsExternalHub] = useState(false);
+  const [hubId, setHubId] = useState(null);
+  const [hub, setHub] = useState(null);
   const [stats, setStats] = useState({
     members: mockMembers.length,
     projects: 0,
     events: 0,
     satsRaised: 0,
     satsNeeded: 0,
+    hubResonance: 0,
   });
 
+  const { setLoading } = useLoading();
+
+  // Determine which hub to load (from URL or user's selected hub)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hubIdParam = urlParams.get('hubId');
+    
+    if (hubIdParam) {
+      setIsExternalHub(true);
+      setHubId(hubIdParam);
+    } else {
+      setIsExternalHub(false);
+      setHubId('user'); // Will fetch user first to get their hub_id
+    }
+  }, []);
+
+  // Use cached data for current user (only if not external hub)
+  const { data: currentUser, isLoading: userLoading } = useCachedData(
+    ['hub', 'currentUser'],
+    () => User.me(),
+    'hub',
+    { enabled: hubId === 'user' } // Only fetch if we need user's hub
+  );
+
+  // Determine actual hub ID after user is loaded
+  const actualHubId = hubId === 'user' ? currentUser?.hub_id : hubId;
+
+  // Use cached data for hubs
+  const { data: allHubs = [], isLoading: hubsLoading } = useCachedData(
+    ['hub', 'hubs'],
+    () => Hub.list(),
+    'hub',
+    { enabled: !!actualHubId } // Only fetch when we have a hub ID
+  );
+
+  // Use cached data for projects
+  const { data: projects = [], isLoading: projectsLoading } = useCachedData(
+    ['hub', 'projects', actualHubId],
+    () => Project.filter({ hub_id: actualHubId }),
+    'hub',
+    { enabled: !!actualHubId }
+  );
+
+  // Use cached data for events
+  const { data: events = [], isLoading: eventsLoading } = useCachedData(
+    ['hub', 'events', actualHubId],
+    () => Event.filter({ hub_id: actualHubId }),
+    'hub',
+    { enabled: !!actualHubId }
+  );
+
+  // Use cached data for resonance score
+  const { data: resonanceData, isLoading: resonanceLoading } = useCachedData(
+    ['hub', 'resonance', actualHubId],
+    async () => {
+      try {
+        const response = await base44.functions.invoke('getResonanceScore', {
+          entity_type: 'hub',
+          entity_id: actualHubId
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Error loading hub resonance:', error);
+        return null;
+      }
+    },
+    'hub',
+    { enabled: !!actualHubId }
+  );
+
+  const isLoading = (hubId === 'user' && userLoading) || hubsLoading || projectsLoading || eventsLoading || resonanceLoading;
 
   useEffect(() => {
-    let isMounted = true;
+    setLoading(isLoading);
+  }, [isLoading, setLoading]);
+
+  // Set hub when data is loaded
+  useEffect(() => {
+    if (!actualHubId || allHubs.length === 0) return;
+
+    const currentHub = allHubs.find(h => h.id === actualHubId);
     
-    const loadData = async () => {
-      if (!isMounted) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Step 1: Get current user to find their selected hub
-        const currentUser = await User.me();
-        const userHubId = currentUser.hub_id;
-
-        if (!userHubId) {
-          if (isMounted) {
-            setError("No local hub selected. Please choose your hub in your profile.");
-            setIsLoading(false); // Stop loading if no hub ID
-          }
-          return; // Exit early
-        }
-
-        // Step 2: Fetch all hubs and find the one matching the user's preference
-        const hubs = await Hub.list();
-        if (!isMounted) return;
-
-        const currentHub = hubs.find(h => h.id === userHubId);
-        
-        if (currentHub) {
-          if (!isMounted) return;
-          setHub(currentHub);
-
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          const projectData = await Project.filter({ hub_id: currentHub.id });
-          if (!isMounted) return;
-          setProjects(projectData);
-
-          const satsRaised = projectData.reduce((sum, p) => sum + (p.funding_raised || 0), 0);
-          const satsNeeded = projectData.reduce((sum, p) => sum + (p.funding_needed || 0), 0);
-          
-          await new Promise(resolve => setTimeout(resolve, 200));
-          const eventData = await Event.filter({ hub_id: currentHub.id });
-          if (isMounted) {
-            setEvents(eventData);
-            setStats({
-              members: mockMembers.length, // Using mock data length
-              projects: projectData.length,
-              events: eventData.length,
-              satsRaised,
-              satsNeeded,
-            });
-          }
-        } else {
-          // If the hub ID from the user profile doesn't match any existing hub
-          if(isMounted) {
-            setError("Your selected hub could not be found. Please choose a new one in your profile.");
-          }
-        }
-      } catch (err) {
-        console.error("Error loading hub data:", err);
-        if (isMounted) {
-          setError("Failed to load hub data. Please try refreshing the page.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+    if (!currentHub) {
+      if (isExternalHub) {
+        setError("Hub not found. Please select a valid hub from the Global Hubs page.");
+      } else {
+        setError("Your selected hub could not be found. Please choose a new one in your profile.");
       }
-    };
+      return;
+    }
 
-    loadData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setHub(currentHub);
+    setError(null);
+  }, [actualHubId, allHubs, isExternalHub]);
+
+  // Calculate stats when data changes
+  useEffect(() => {
+    if (!hub) return;
+
+    const satsRaised = projects.reduce((sum, p) => sum + (p.funding_raised || 0), 0);
+    const satsNeeded = projects.reduce((sum, p) => sum + (p.funding_needed || 0), 0);
+    const hubResonanceScore = resonanceData?.exists ? (resonanceData.score_total || 0) : 0;
+
+    setStats({
+      members: mockMembers.length,
+      projects: projects.length,
+      events: events.length,
+      satsRaised,
+      satsNeeded,
+      hubResonance: hubResonanceScore,
+    });
+  }, [hub, projects, events, resonanceData]);
 
   const handleCardClick = (project) => {
     if (project.status === 'completed' || project.status === 'cancelled') {
@@ -134,36 +170,28 @@ export default function HubPage() {
 
   const handleSupport = async (project) => {
     try {
-      // Get current user
       const currentUser = await User.me();
       
-      // Check if user is already supporting this project
       const currentSupporters = project.supporters || [];
       if (currentSupporters.includes(currentUser.id)) {
         console.log('User is already supporting this project');
-        return; // User already supports this project
+        return;
       }
 
-      // Add user to supporters array
       const updatedSupporters = [...currentSupporters, currentUser.id];
       
-      // Update the project in the database
-      const updatedProject = await Project.update(project.id, {
+      await Project.update(project.id, {
+        ...project,
+        goal: project.goal || project.description || "Project goal",
+        manifesto_compliance: project.manifesto_compliance || true,
+        community_commitment: project.community_commitment || true,
         supporters: updatedSupporters
       });
-
-      // Update the local projects state
-      setProjects(prevProjects => 
-        prevProjects.map(p => 
-          p.id === updatedProject.id ? updatedProject : p
-        )
-      );
 
       console.log(`Successfully added support! Total supporters: ${updatedSupporters.length}`);
       
     } catch (error) {
       console.error('Error supporting project:', error);
-      // You might want to show a user-friendly error message here
     }
   };
 
@@ -172,18 +200,9 @@ export default function HubPage() {
       return;
     }
     console.log("Voting on project:", project.title);
-    // TODO: Implement voting functionality
   };
 
   const handleProjectUpdate = (updatedProject) => {
-    // Update the local projects state with the updated project
-    setProjects(prevProjects => 
-      prevProjects.map(p => 
-        p.id === updatedProject.id ? updatedProject : p
-      )
-    );
-    
-    // Also update the selected project if it's the same one
     if (selectedProject && selectedProject.id === updatedProject.id) {
       setSelectedProject(updatedProject);
     }
@@ -195,12 +214,6 @@ export default function HubPage() {
   };
 
   const handleEventUpdate = (updatedEvent) => {
-    setEvents(prevEvents => 
-      prevEvents.map(e => 
-        e.id === updatedEvent.id ? updatedEvent : e
-      )
-    );
-    
     if (selectedEvent && selectedEvent.id === updatedEvent.id) {
       setSelectedEvent(updatedEvent);
     }
@@ -220,6 +233,13 @@ export default function HubPage() {
                   Go to Profile
                 </Button>
               </Link>
+            ) : error.includes("Hub not found") ? (
+              <Link to={createPageUrl("GlobalHubs")}>
+                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <Globe2 className="w-4 h-4 mr-2" />
+                  Go to Global Hubs
+                </Button>
+              </Link>
             ) : (
               <Button 
                 onClick={() => window.location.reload()}
@@ -236,13 +256,24 @@ export default function HubPage() {
 
   if (isLoading || !hub) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <motion.div
-          className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 360] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
+      <>
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
+          <div className="text-center w-full">
+            <div className="flex justify-center">
+              <CoherosphereNetworkSpinner 
+                size={100}
+                lineWidth={2}
+                dotRadius={6}
+                interval={1100}
+                maxConcurrent={4}
+              />
+            </div>
+            <div className="text-slate-400 text-lg mt-4">Loading...</div>
+          </div>
+        </div>
+        
+        <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
+      </>
     );
   }
 
@@ -254,14 +285,29 @@ export default function HubPage() {
           <MapPin className="w-12 h-12 text-orange-500 flex-shrink-0" />
           <div>
             <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
-              Local Hub: {hub.name}
+              {isExternalHub ? `Hub: ${hub.name}` : `Local Hub: ${hub.name}`}
             </h1>
             <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
           </div>
         </div>
-        <p className="text-lg text-slate-400 leading-relaxed max-w-3xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-          {hub.location} • Your local resonance space – projects, events, and members connected to the global coherosphere.
-        </p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-lg text-slate-400 leading-relaxed max-w-3xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {hub.location} • {isExternalHub ? 'Explore this resonance space and its community.' : 'Your local resonance space – projects, events, and members connected to the global coherosphere.'}
+          </p>
+          
+          {isExternalHub && (
+            <Link to={createPageUrl("Hub")}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1.5"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Back to my hub
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Stats & Actions */}
@@ -271,7 +317,22 @@ export default function HubPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+          <Link to={`${createPageUrl('HubResonance')}?hubId=${hub.id}`} className="block">
+            <Card className="bg-slate-800/50 backdrop-blur-sm border-orange-500/50 hover:border-orange-500 hover:shadow-lg hover:shadow-orange-500/20 transition-all duration-300 h-full cursor-pointer group">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Activity className="w-8 h-8 text-orange-400 group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="text-2xl font-bold text-orange-400">{Math.round(stats.hubResonance)}</div>
+                <div className="text-slate-300 text-sm flex items-center justify-center gap-1">
+                  Hub Resonance
+                  <TrendingUp className="w-3 h-3" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700">
             <CardContent className="p-4 text-center">
               <Users className="w-8 h-8 text-purple-400 mx-auto mb-2" />
@@ -322,13 +383,13 @@ export default function HubPage() {
           </Link>
           <Link to={createPageUrl('HostEvent') + `?hubId=${hub.id}`} className="flex-1">
             <Button className="w-full bg-gradient-to-r from-turquoise-500 to-cyan-500 hover:from-turquoise-600 hover:to-cyan-600 text-white font-semibold">
-              <Zap className="w-4 h-4 mr-2" /> Host an Event
+              <Plus className="w-4 h-4 mr-2" /> Host an Event
             </Button>
           </Link>
         </div>
       </motion.div>
 
-      {/* Tab Navigation - Updated to use filter-chip style */}
+      {/* Tab Navigation */}
       <div className="mb-8">
         <div className="flex flex-wrap gap-3">
           <Button
@@ -352,7 +413,7 @@ export default function HubPage() {
                 : 'bg-slate-700 text-slate-300'
               }`}
             >
-              {members.length}
+              {mockMembers.length}
             </Badge>
           </Button>
           <Button
@@ -388,8 +449,7 @@ export default function HubPage() {
               ${activeTab === 'events' 
                 ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg' 
                 : 'bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-700/50'
-              }`
-            }
+              }`}
           >
             <span>Events</span>
             <Badge 
@@ -410,10 +470,10 @@ export default function HubPage() {
       <div className="mt-6">
         {activeTab === 'members' && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-            {members.map((member, index) => (
+            {mockMembers.map((member, index) => (
               <MemberCard key={member.id} member={member} index={index} />
             ))}
-            {members.length === 0 && <p className="col-span-full text-center text-slate-400 py-10">No members found in this hub.</p>}
+            {mockMembers.length === 0 && <p className="col-span-full text-center text-slate-400 py-10">No members found in this hub.</p>}
           </div>
         )}
 

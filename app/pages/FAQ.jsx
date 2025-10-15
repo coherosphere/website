@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { faq as Faq } from '@/api/entities';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HelpCircle, Globe, Zap, Search, Handshake, RefreshCw, Eye } from 'lucide-react';
 import { debounce } from 'lodash';
+import { motion } from 'framer-motion';
 
 import FAQItem from '@/components/faq/FAQItem';
 import FAQSearch from '@/components/faq/FAQSearch';
 import StatCard from '@/components/StatCard';
 import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { useCachedData } from '@/components/caching/useCachedData';
+import { useLoading } from '@/components/loading/LoadingContext';
 
 const categoryIcons = {
   'Introduction': HelpCircle,
@@ -18,8 +20,6 @@ const categoryIcons = {
 };
 
 export default function FAQPage() {
-  const [faqs, setFaqs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeSlug, setActiveSlug] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTag, setActiveTag] = useState(null);
@@ -27,36 +27,38 @@ export default function FAQPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const itemRefs = useRef({});
+  const { setLoading } = useLoading();
+
+  // Use cached data for FAQs
+  const { data: faqs = [], isLoading } = useCachedData(
+    ['faq', 'published', 'en'],
+    async () => {
+      const publishedFaqs = await Faq.filter({ status: 'published', locale: 'en' });
+      return publishedFaqs.sort((a, b) => {
+        if (a.category < b.category) return -1;
+        if (a.category > b.category) return 1;
+        return a.position - b.position;
+      });
+    },
+    'faq'
+  );
 
   useEffect(() => {
-    const fetchFaqs = async () => {
-      setIsLoading(true);
-      try {
-        const publishedFaqs = await Faq.filter({ status: 'published', locale: 'en' });
-        const sortedFaqs = publishedFaqs.sort((a, b) => {
-          if (a.category < b.category) return -1;
-          if (a.category > b.category) return 1;
-          return a.position - b.position;
-        });
-        setFaqs(sortedFaqs);
+    setLoading(isLoading);
+  }, [isLoading, setLoading]);
 
-        // Handle deep-linking on initial load
-        const hash = location.hash.replace('#', '');
-        if (hash && sortedFaqs.some(f => f.slug === hash)) {
-          setActiveSlug(hash);
-          setTimeout(() => {
-            itemRefs.current[hash]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 100);
-        }
-
-      } catch (error) {
-        console.error("Failed to fetch FAQs:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchFaqs();
-  }, [location.hash]);
+  // Handle deep-linking on initial load
+  useEffect(() => {
+    if (faqs.length === 0) return;
+    
+    const hash = location.hash.replace('#', '');
+    if (hash && faqs.some(f => f.slug === hash)) {
+      setActiveSlug(hash);
+      setTimeout(() => {
+        itemRefs.current[hash]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [location.hash, faqs]);
 
   const handleToggle = async (slug) => {
     const newSlug = activeSlug === slug ? null : slug;
@@ -73,12 +75,8 @@ export default function FAQPage() {
             views: currentViews + 1
           });
           
-          // Update local state
-          setFaqs(prevFaqs => 
-            prevFaqs.map(f => 
-              f.id === faq.id ? { ...f, views: currentViews + 1 } : f
-            )
-          );
+          // Note: We don't update local state here as React Query will handle
+          // refetching on the next interval based on caching policy
         }
       } catch (error) {
         console.error('Error tracking FAQ view:', error);
@@ -180,13 +178,13 @@ export default function FAQPage() {
         <div className="flex items-center gap-4 mb-3">
           <HelpCircle className="w-12 h-12 text-orange-500 flex-shrink-0" />
           <div>
-            <h1 className="text-4xl font-bold text-white" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+            <h1 className="text-4xl font-bold text-white leading-tight" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
               Frequently Asked Questions
             </h1>
             <div className="w-16 h-1 bg-orange-500 mt-2 rounded-full"></div>
           </div>
         </div>
-        <p className="text-lg text-slate-400 max-w-3xl mt-3">
+        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl mt-3" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
           Answers to common questions about our vision, technology, and how to participate.
         </p>
       </motion.div>

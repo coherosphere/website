@@ -17,6 +17,7 @@ import {
   HeartOff,
   Clock // Added Clock icon
 } from 'lucide-react';
+import { base44 } from '@/api/base44Client'; // Added import for base44
 
 export default function ProjectCard({ project, index, onCardClick, onSupport, onVote, isDisabled = false }) {
   const [currentUser, setCurrentUser] = React.useState(null);
@@ -121,6 +122,91 @@ export default function ProjectCard({ project, index, onCardClick, onSupport, on
         // Add support
         updatedSupporters = [...currentSupporters, user.id];
         console.log('Adding support to project');
+        
+        // Record resonance event for PROJECT_SUPPORT
+        try {
+          // Base magnitude for supporting a project
+          let magnitude = 2.0;
+          
+          // Check if user is creator or contributor (prevent double-counting)
+          const isCreator = project.creator_id === user.id;
+          const isContributor = false; // TODO: Add contributors field to project if needed
+          
+          if (!isCreator && !isContributor) {
+            // Calculate alignment score based on project's manifesto compliance
+            let alignmentScore = 1.0;
+            
+            // Check manifesto alignment
+            if (project.manifesto_compliance === true) {
+              alignmentScore = 1.1;
+            }
+            
+            // Bonus if project has strong manifesto values
+            const manifestoValues = ['resilience', 'transparency', 'collective', 'community', 'governance'];
+            const projectValues = (project.values || []).map(v => v.toLowerCase());
+            const hasStrongAlignment = projectValues.filter(v => 
+              manifestoValues.some(mv => v.includes(mv))
+            ).length >= 2;
+            
+            if (hasStrongAlignment) {
+              alignmentScore = 1.2;
+            }
+
+            // Record for the supporter (User entity)
+            await base44.functions.invoke('recordResonanceEvent', {
+              entity_type: 'user',
+              entity_id: user.id,
+              action_type: 'PROJECT_SUPPORT',
+              magnitude: magnitude,
+              alignment_score: alignmentScore,
+              hub_id: project.hub_id,
+              metadata: {
+                project_id: project.id,
+                project_title: project.title,
+                project_category: project.category,
+                project_status: project.status,
+                has_manifesto_compliance: project.manifesto_compliance,
+                has_strong_alignment: hasStrongAlignment
+              }
+            });
+
+            // Record for the project itself
+            await base44.functions.invoke('recordResonanceEvent', {
+              entity_type: 'project',
+              entity_id: project.id,
+              action_type: 'PROJECT_SUPPORT',
+              magnitude: magnitude * 0.5, // Project gets half the points
+              alignment_score: alignmentScore,
+              hub_id: project.hub_id,
+              metadata: {
+                supporter_id: user.id,
+                total_supporters: updatedSupporters.length
+              }
+            });
+
+            // If project is in a hub, give hub a small bonus
+            if (project.hub_id) {
+              await base44.functions.invoke('recordResonanceEvent', {
+                entity_type: 'hub',
+                entity_id: project.hub_id,
+                action_type: 'PROJECT_SUPPORT',
+                magnitude: 0.3,
+                alignment_score: alignmentScore,
+                metadata: {
+                  project_id: project.id,
+                  supporter_id: user.id
+                }
+              });
+            }
+
+            console.log(`✓ Project support resonance recorded (${magnitude} points)`);
+          } else {
+            console.log('User is creator/contributor - no support bonus to prevent double-counting');
+          }
+        } catch (error) {
+          console.error('Failed to record resonance event:', error);
+          // Don't fail the support action if resonance recording fails
+        }
       }
 
       // Update the project in the database - include all required fields with fallbacks
@@ -200,7 +286,7 @@ export default function ProjectCard({ project, index, onCardClick, onSupport, on
 
                 {/* Tags moved under title for better mobile layout */}
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="outline" className={`border ${statusColors[project.status] || 'bg-slate-500/20 text-slate-400'} ${
+                  <Badge variant="outline" className={`border ${statusColors[project.status]} ${
                     isDisabled ? 'opacity-50' : ''
                   }`}>
                     {project.status}
@@ -282,7 +368,7 @@ export default function ProjectCard({ project, index, onCardClick, onSupport, on
           {/* Fixed bottom section with stats and buttons */}
           <div className="mt-auto">
             {/* Activity Indicators */}
-            <div className="grid grid-cols-4 gap-4 text-center mb-4"> {/* Changed to grid-cols-4 */}
+            <div className="grid grid-cols-4 gap-4 text-center mb-4">
               <div className="text-sm">
                 <div className={`flex items-center justify-center gap-1 ${
                   isDisabled ? 'text-slate-500' : 'text-slate-300'
@@ -306,7 +392,7 @@ export default function ProjectCard({ project, index, onCardClick, onSupport, on
                   isDisabled ? 'text-slate-500' : 'text-slate-300'
                 }`}>
                   <TrendingUp className="w-3 h-3" />
-                  <span>{Math.round(project.resonance_level || 0)}/10</span>
+                  <span>{project.realResonance ? project.realResonance.toFixed(1) : '0.0'}</span>
                 </div>
                 <span className={`text-xs ${isDisabled ? 'text-slate-600' : 'text-slate-500'}`}>Resonance</span>
               </div>

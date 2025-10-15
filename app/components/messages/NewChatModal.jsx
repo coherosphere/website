@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '@/api/entities';
@@ -73,6 +74,16 @@ export default function NewChatModal({ isOpen, onClose, onConversationCreated, c
         }
     };
 
+    // Helper function for avatar URLs with fallback
+    const getAvatarUrl = (avatarUrl, seed) => {
+        if (avatarUrl && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'))) {
+            return avatarUrl;
+        }
+        // Fallback to DiceBear if no valid avatar URL is provided
+        const finalSeed = seed || 'fallback-user'; // Ensure seed is always available
+        return `https://api.dicebear.com/7.x/identicon/svg?seed=${finalSeed}&backgroundColor=FF6A00,FF8C42&size=120`;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -145,9 +156,15 @@ export default function NewChatModal({ isOpen, onClose, onConversationCreated, c
                                         className="w-full p-4 rounded-xl bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                                {(user.display_name || user.full_name || user.email)?.[0]?.toUpperCase() || '?'}
-                                            </div>
+                                            <img
+                                                src={getAvatarUrl(user.avatar_url, user.nostr_pubkey || user.email)}
+                                                alt={user.display_name || user.full_name || 'User Avatar'}
+                                                className="w-10 h-10 rounded-full flex-shrink-0 object-cover border-2 border-slate-600"
+                                                onError={(e) => {
+                                                    // Fallback if the provided avatar_url fails to load
+                                                    e.target.src = getAvatarUrl(null, user.nostr_pubkey || user.email || 'fallback');
+                                                }}
+                                            />
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-semibold text-white truncate">
                                                     {user.display_name || user.full_name || 'Unknown User'}

@@ -40,6 +40,48 @@ import Brand from "./Brand";
 
 import Terms from "./Terms";
 
+import FAQ from "./FAQ";
+
+import dashboard from "./dashboard";
+
+import Calendar from "./Calendar";
+
+import Donate from "./Donate";
+
+import Status from "./Status";
+
+import Spinner from "./Spinner";
+
+import AddKnowledge from "./AddKnowledge";
+
+import Chat from "./Chat";
+
+import GlobalHubs from "./GlobalHubs";
+
+import Messages from "./Messages";
+
+import VideoCall from "./VideoCall";
+
+import NostrAuth from "./NostrAuth";
+
+import ResonanceCheck from "./ResonanceCheck";
+
+import ResonanceAdmin from "./ResonanceAdmin";
+
+import UserResonance from "./UserResonance";
+
+import 404 from "./404";
+
+import HubResonance from "./HubResonance";
+
+import PerfStats from "./PerfStats";
+
+import CachingPolicyAdmin from "./CachingPolicyAdmin";
+
+import GeneralPlatformSettings from "./GeneralPlatformSettings";
+
+import Interop from "./Interop";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -83,6 +125,48 @@ const PAGES = {
     Brand: Brand,
     
     Terms: Terms,
+    
+    FAQ: FAQ,
+    
+    dashboard: dashboard,
+    
+    Calendar: Calendar,
+    
+    Donate: Donate,
+    
+    Status: Status,
+    
+    Spinner: Spinner,
+    
+    AddKnowledge: AddKnowledge,
+    
+    Chat: Chat,
+    
+    GlobalHubs: GlobalHubs,
+    
+    Messages: Messages,
+    
+    VideoCall: VideoCall,
+    
+    NostrAuth: NostrAuth,
+    
+    ResonanceCheck: ResonanceCheck,
+    
+    ResonanceAdmin: ResonanceAdmin,
+    
+    UserResonance: UserResonance,
+    
+    404: 404,
+    
+    HubResonance: HubResonance,
+    
+    PerfStats: PerfStats,
+    
+    CachingPolicyAdmin: CachingPolicyAdmin,
+    
+    GeneralPlatformSettings: GeneralPlatformSettings,
+    
+    Interop: Interop,
     
 }
 
@@ -150,6 +234,48 @@ function PagesContent() {
                 <Route path="/Brand" element={<Brand />} />
                 
                 <Route path="/Terms" element={<Terms />} />
+                
+                <Route path="/FAQ" element={<FAQ />} />
+                
+                <Route path="/dashboard" element={<dashboard />} />
+                
+                <Route path="/Calendar" element={<Calendar />} />
+                
+                <Route path="/Donate" element={<Donate />} />
+                
+                <Route path="/Status" element={<Status />} />
+                
+                <Route path="/Spinner" element={<Spinner />} />
+                
+                <Route path="/AddKnowledge" element={<AddKnowledge />} />
+                
+                <Route path="/Chat" element={<Chat />} />
+                
+                <Route path="/GlobalHubs" element={<GlobalHubs />} />
+                
+                <Route path="/Messages" element={<Messages />} />
+                
+                <Route path="/VideoCall" element={<VideoCall />} />
+                
+                <Route path="/NostrAuth" element={<NostrAuth />} />
+                
+                <Route path="/ResonanceCheck" element={<ResonanceCheck />} />
+                
+                <Route path="/ResonanceAdmin" element={<ResonanceAdmin />} />
+                
+                <Route path="/UserResonance" element={<UserResonance />} />
+                
+                <Route path="/404" element={<404 />} />
+                
+                <Route path="/HubResonance" element={<HubResonance />} />
+                
+                <Route path="/PerfStats" element={<PerfStats />} />
+                
+                <Route path="/CachingPolicyAdmin" element={<CachingPolicyAdmin />} />
+                
+                <Route path="/GeneralPlatformSettings" element={<GeneralPlatformSettings />} />
+                
+                <Route path="/Interop" element={<Interop />} />
                 
             </Routes>
         </Layout>

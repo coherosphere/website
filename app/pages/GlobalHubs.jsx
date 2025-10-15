@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Hub, Project, Event } from "@/api/entities";
+import { Hub, Project, Event, ResonanceScore } from "@/api/entities";
 import { motion } from "framer-motion";
 import { Globe2, MapPin, Users, Lightbulb, Calendar, Activity, Copy, Check, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,54 +9,81 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { useCachedData } from '@/components/caching/useCachedData';
+import { useLoading } from '@/components/loading/LoadingContext';
 
 export default function GlobalHubs() {
-  const [hubs, setHubs] = useState([]);
-  const [hubsWithStats, setHubsWithStats] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState(null);
+  const { setLoading } = useLoading();
+
+  // Use cached data with correct 'globalHubs' domain
+  const { data: hubs = [], isLoading: hubsLoading } = useCachedData(
+    ['globalHubs', 'hubs'],
+    () => Hub.list(),
+    'globalHubs' 
+  );
+
+  const { data: allProjects = [], isLoading: projectsLoading } = useCachedData(
+    ['globalHubs', 'projects'],
+    () => Project.list(),
+    'globalHubs' 
+  );
+
+  const { data: allEvents = [], isLoading: eventsLoading } = useCachedData(
+    ['globalHubs', 'events'],
+    () => Event.list(),
+    'globalHubs' 
+  );
+
+  const { data: allResonanceScores = [], isLoading: resonanceLoading } = useCachedData(
+    ['globalHubs', 'resonance'],
+    () => ResonanceScore.filter({ entity_type: 'hub' }),
+    'globalHubs' 
+  );
+
+  const isLoading = hubsLoading || projectsLoading || eventsLoading || resonanceLoading;
 
   useEffect(() => {
-    const loadHubs = async () => {
-      setIsLoading(true);
-      try {
-        // Load ALL data in parallel (only 3 API calls total instead of 1 + n*2)
-        const [hubsData, allProjects, allEvents] = await Promise.all([
-          Hub.list(),
-          Project.list(),
-          Event.list()
-        ]);
-        
-        setHubs(hubsData);
+    setLoading(isLoading);
+  }, [isLoading, setLoading]);
 
-        // Filter projects and events by hub_id in the frontend
-        const enrichedHubs = hubsData.map((hub) => {
-          const hubProjects = allProjects.filter(p => p.hub_id === hub.id);
-          const hubEvents = allEvents.filter(e => e.hub_id === hub.id);
+  // Enrich hubs with stats
+  const hubsWithStats = React.useMemo(() => {
+    const resonanceMap = new Map();
+    allResonanceScores.forEach(score => {
+      resonanceMap.set(score.entity_id, score);
+    });
 
-          const activeProjects = hubProjects.filter(p => 
-            ['active', 'voting', 'proposed', 'ideation', 'planning', 'funding', 'launch'].includes(p.status)
-          ).length;
+    const enriched = hubs.map((hub) => {
+      const hubProjects = allProjects.filter(p => p.hub_id === hub.id);
+      const hubEvents = allEvents.filter(e => e.hub_id === hub.id);
 
-          return {
-            ...hub,
-            totalProjects: hubProjects.length,
-            activeProjects: activeProjects,
-            totalEvents: hubEvents.length,
-            upcomingEvents: hubEvents.filter(e => new Date(e.date) > new Date()).length
-          };
-        });
+      const activeProjects = hubProjects.filter(p => 
+        ['active', 'voting', 'proposed', 'ideation', 'planning', 'funding', 'launch'].includes(p.status)
+      ).length;
 
-        setHubsWithStats(enrichedHubs);
-      } catch (error) {
-        console.error("Error loading hubs:", error);
-      } finally {
-        setIsLoading(false);
+      const resonanceScore = resonanceMap.get(hub.id);
+      const realResonance = resonanceScore ? (resonanceScore.intensity || resonanceScore.score_total) : 0;
+
+      return {
+        ...hub,
+        totalProjects: hubProjects.length,
+        activeProjects: activeProjects,
+        totalEvents: hubEvents.length,
+        upcomingEvents: hubEvents.filter(e => new Date(e.date) > new Date()).length,
+        realResonance: realResonance
+      };
+    });
+
+    enriched.sort((a, b) => {
+      if (b.realResonance !== a.realResonance) {
+        return b.realResonance - a.realResonance;
       }
-    };
+      return (b.member_count || 0) - (a.member_count || 0);
+    });
 
-    loadHubs();
-  }, []);
+    return enriched;
+  }, [hubs, allProjects, allEvents, allResonanceScores]);
 
   const handleCopyId = (hubId) => {
     navigator.clipboard.writeText(hubId);
@@ -67,7 +94,6 @@ export default function GlobalHubs() {
   if (isLoading) {
     return (
       <>
-        {/* Fixed Overlay Spinner */}
         <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center z-50">
           <div className="text-center">
               <CoherosphereNetworkSpinner 
@@ -81,7 +107,6 @@ export default function GlobalHubs() {
           </div>
         </div>
         
-        {/* Virtual placeholder */}
         <div className="min-h-[calc(100vh-200px)]" aria-hidden="true"></div>
       </>
     );
@@ -168,7 +193,7 @@ export default function GlobalHubs() {
                     <div 
                       className="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center resonance-glow"
                       style={{
-                        boxShadow: `0 0 ${20 * (hub.resonance_intensity || 1)}px rgba(255, 106, 0, ${0.3 * (hub.resonance_intensity || 1)})`
+                        boxShadow: `0 0 ${20 * Math.max(1, hub.realResonance / 10)}px rgba(255, 106, 0, ${0.3 * Math.max(0.5, Math.min(1, hub.realResonance / 20))})`
                       }}
                     >
                       <MapPin className="w-6 h-6 text-white" />
@@ -178,21 +203,16 @@ export default function GlobalHubs() {
                       <p className="text-sm text-slate-400">{hub.location}</p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="border-orange-500/30 text-orange-400 bg-orange-500/10">
-                    {hub.resonance_intensity ? `${hub.resonance_intensity.toFixed(1)}x` : '1.0x'}
-                  </Badge>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4 flex-1 flex flex-col">
-                {/* Description */}
                 {hub.description && (
                   <p className="text-slate-300 text-sm leading-relaxed">
                     {hub.description}
                   </p>
                 )}
 
-                {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3 flex-grow">
                   <div className="bg-slate-900/50 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-slate-400 mb-1">
@@ -234,12 +254,11 @@ export default function GlobalHubs() {
                       <span className="text-xs">Resonance</span>
                     </div>
                     <div className="text-lg font-bold text-orange-400">
-                      {(hub.resonance_intensity || 1.0).toFixed(1)}x
+                      {hub.realResonance > 0 ? hub.realResonance.toFixed(1) : '0.0'}
                     </div>
                   </div>
                 </div>
 
-                {/* Hub ID with Copy Button and View Hub Link - This stays at the bottom */}
                 <div className="pt-3 border-t border-slate-700 mt-auto">
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-slate-500">Hub ID:</div>
@@ -278,7 +297,6 @@ export default function GlobalHubs() {
         ))}
       </div>
 
-      {/* Empty State */}
       {hubs.length === 0 && (
         <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-700">
           <CardContent className="p-12 text-center">

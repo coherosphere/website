@@ -7,8 +7,10 @@ import { Copy, QrCode, Zap, CheckCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateQrCode } from '@/api/functions';
 import CoherosphereNetworkSpinner from '@/components/spinners/CoherosphereNetworkSpinner';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
-export default function ProfileHeader({ user }) {
+export default function ProfileHeader({ user }) { // resonanceScore and isLoadingResonance removed from props
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
@@ -164,14 +166,13 @@ export default function ProfileHeader({ user }) {
                 </div>
               </div>
 
-              {/* Stats */}
+              {/* Role only - Resonance removed */}
               <div className="flex gap-6 text-sm justify-center md:justify-start">
+                {/* The Resonance stat block has been removed */}
                 <div className="text-center">
-                  <div className="text-xl font-bold text-white">{user.resonance_score || 42}</div>
-                  <div className="text-slate-400">Resonance</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-white">{user.role === 'admin' ? 'Admin' : 'Member'}</div>
+                  <div className="text-2xl font-bold text-white h-8 flex items-center justify-center">
+                    {user.role === 'admin' ? 'Admin' : 'Member'}
+                  </div>
                   <div className="text-slate-400">Role</div>
                 </div>
               </div>

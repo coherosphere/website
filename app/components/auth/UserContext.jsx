@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/api/entities';
 
@@ -39,11 +40,11 @@ export const UserProvider = ({ children }) => {
           setIsLoading(false);
           setIsInitialized(true);
           
-          console.log('Using cached authentication data');
+          console.log('[UserContext] Using cached authentication data');
           return; // Kein API-Call nötig
         }
       } catch (error) {
-        console.warn('Failed to load cached auth data:', error);
+        console.warn('[UserContext] Failed to load cached auth data:', error);
         // Fahre fort mit normalem API-Call
       }
 
@@ -58,9 +59,9 @@ export const UserProvider = ({ children }) => {
         sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
         sessionStorage.setItem(AUTH_STATUS_KEY, 'true');
         
-        console.log('Loaded user from API and cached');
+        console.log('[UserContext] Loaded user from API and cached');
       } catch (error) {
-        console.log('User not authenticated');
+        console.log('[UserContext] User not authenticated');
         setIsAuthenticated(false);
         setCurrentUser(null);
         
@@ -88,9 +89,11 @@ export const UserProvider = ({ children }) => {
       sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
       sessionStorage.setItem(AUTH_STATUS_KEY, 'true');
       
+      console.log('[UserContext] User refreshed:', user.email, 'screensaver_enabled:', user.screensaver_enabled);
+      
       return user;
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      console.error('[UserContext] Failed to refresh user:', error);
       setIsAuthenticated(false);
       setCurrentUser(null);
       
@@ -112,6 +115,8 @@ export const UserProvider = ({ children }) => {
       
       // Update cache
       sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(updated));
+      
+      console.log('[UserContext] User updated locally:', updated.email, 'screensaver_enabled:', updated.screensaver_enabled);
       
       return updated;
     });

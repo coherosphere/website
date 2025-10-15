@@ -63,7 +63,7 @@ export default function SupportedProjects({ projects, user, onProjectsUpdate }) 
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-white flex items-center gap-3">
-            <Heart className="w-5 h-5 text-red-400" />
+            <Heart className="w-5 h-5 text-white" />
             Supported Projects
             <Badge variant="secondary" className="bg-slate-700 text-slate-300">
               {projects.length}
