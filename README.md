@@ -1,20 +1,29 @@
-# Base44 App
+# coherosphere / website
 
+**The public gateway to the sphere of coherence.**  
 
-This app was created automatically by Base44.
-It's a Vite+React app that communicates with the Base44 API.
+This repository hosts the **official coherosphere website** — a living interface between  
+the Manifesto, the Whitepaper, and the community of builders shaping collective coherence.
 
-## Running the app
+---
 
-```bash
-npm install
-npm run dev
-```
+## Purpose
 
-## Building the app
+The website is not static documentation; it is a **resonant field** — an evolving  
+communication layer that visualizes meaning, metrics, and participation across the ecosystem.
 
-```bash
-npm run build
-```
+---
 
-For more information and support, please contact Base44 support at app@base44.com.
+## Contents
+
+- **Landing Page** — introduction to the coherosphere vision  
+- **Manifesto & Whitepaper access** — public editions, PDFs, and media  
+- **Resonance visualizations** — interactive data from the API  
+- **Community gateway** — links to hubs, DAOs, and discourse spaces  
+
+---
+
+## Usage
+
+The site is built with **Next.js + Tailwind**, deployable on any static host.  
+Data modules connect directly to the coherosphere API for live resonance updates.
